@@ -1,10 +1,10 @@
 {
-    module Grammars where 
-    import Lex (Token(..), lexer)
+module Grammars where
+import Lex (Token(..), lexer)
 }
 
 %name parser
-%tokeytype { Token } -- por eso lo importamos del .hs
+%tokentype { Token } -- por eso lo importamos del .hs
 %error { parseError } -- un tipo personalizado
 
 %token 
@@ -26,7 +26,7 @@ ASA : int {Num $1} -- estas ya son
 
 {
 
-praseError :: [Token] -> a
+parseError :: [Token] -> a
 parseError _ = error "Parse error"
 
 data ASA 
