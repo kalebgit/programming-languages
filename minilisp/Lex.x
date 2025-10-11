@@ -13,14 +13,23 @@ $digit = 0-9
 
 tokens :-
     $white+              ;
-    \(                  {\_ -> TokenPA} -- donde \_ significa que no hay parametros
-    \)                  {\_ -> TokenPC}
-    \+                  {\_ -> TokenSum}
-    \-                  {\_ -> TokenSub}
-    not                  {\_ -> TokenNot}
-    "#t"                  {\_ -> TokenBool True}
-    "#f"                  {\_ -> TokenBool False}
-    $digit+                  {\s -> TokenNum (read s) } --
+    \(                      {\_ -> TokenPA} -- donde \_ significa que no hay parametros
+    \)                      {\_ -> TokenPC}
+    \+                      {\_ -> TokenSum}
+    \-                      {\_ -> TokenSub}
+    not                     {\_ -> TokenNot}
+    -- lo poneos con comillas pues '#' es parte de la sintaxis geenral de un regex
+    "#t"                    {\_ -> TokenBool True}
+    "#f"                    {\_ -> TokenBool False}
+    $digit+                 {\s -> TokenNum (read s) } --
+
+--agregamos los relacionados al let
+    let                     {\_ -> TokenLet }
+    --regex del var
+    [a-zA-z][a-zA-Z0-9]*    {\s -> TokenVar s}
+
+
+    
 
     .                     { \s -> error ("Lexical error: caracter no reconocido = "
                                     ++ show s
@@ -38,6 +47,11 @@ data Token
     | TokenNot
     | TokenPA -- parentesis que abre
     | TokenPC -- parentesis que cierra
+
+-- relacionado con let
+    | TokenLet
+    | TokenVar String
+
     deriving (Show)
 
 normalizeSpaces :: String -> String

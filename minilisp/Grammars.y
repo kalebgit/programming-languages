@@ -16,13 +16,34 @@ import Lex (Token(..), lexer)
     "not" { TokenNot }
     '(' { TokenPA }
     ')' { TokenPC }
+
+
+    --cosas con let
+    "let" { TokenLet }
+    var  {TokenVar $$} -- obtenemos el nombre de la variable
+
+
+
 %%
 
 ASA : int {Num $1} -- estas ya son 
     | bool {Boolean $1} -- ya es la sintaxis del lenguaje anfitrion
+    | var {Var $1}
     | '(' '+' ASA ASA ')' {Add $3 $4}
     | '(' '-' ASA ASA ')' {Sub $3 $4}
     | '(' "not" ASA ')' {Not $3}
+
+
+
+    --cosas con let: no se si esta bien que reciba asas 
+    -- no se como ponerlo explicito que solo puedan ser vars
+    | '(' "let" '(' ASA ASA ')' ASA ')' { Let $4 $5 $7}
+    -- TODO: hay un error pues en el cuerpo
+    -- si hay identificadores no se cambia a Id(a) 
+    -- o algo para distinguir si es var ligada o no, pero eso se sabe con la posicion no?
+
+
+
 
 {
 
@@ -35,5 +56,11 @@ data ASA
     | Add ASA ASA
     | Sub ASA ASA
     | Not ASA
+
+
+
+    --cosas con let
+    | Let ASA ASA ASA
+    | Var String
     deriving (Show)
 }
