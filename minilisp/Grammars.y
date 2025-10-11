@@ -11,6 +11,7 @@ import Lex (Token(..), lexer)
     --los transformamos 
     int { TokenNum $$ }
     bool { TokenBool $$ }
+
     -- ==================
     -- aritmeticos
     -- ==================
@@ -41,7 +42,8 @@ import Lex (Token(..), lexer)
     -- ==================
     -- logicos
     -- ==================
-    "not" { TokenNot }
+    'not' { TokenNot }
+    'if' {TokenIf }
     '(' { TokenPA }
     ')' { TokenPC }
 
@@ -50,15 +52,24 @@ import Lex (Token(..), lexer)
     -- funciones
     -- ==================
     --cosas con let
-    "let" { TokenLet }
-    var  {TokenVar $$} -- obtenemos el nombre de la variable (i.e. que ya es String?)
+    'let' { TokenLet }
+    'let*' {TokenLetStar}
 
     -- ==================
-    -- otros
+    -- listas
     -- ==================
     ',' {TokenComma}
+    '[' {TokenCA}
+    ']' {TokenCC}
+    'head' {TokenHead}
+    'tail' {TokenTail}
+
+--nucleo
+    'nil' {TokenNil}
+    'cons' {TokenCons}
 
 
+    var  {TokenVar $$} -- obtenemos el nombre de la variable (i.e. que ya es String?)
 
 
 %%
@@ -97,23 +108,45 @@ ASA : int {Num $1} -- estas ya son
     -- logicos
     -- ==================
     | '(' "not" ASA ')' {Not $3}
+    | '(' "if" ASA ASA ASA')' {If $3 $4 $5}
     -- ==================
     -- funciones
     -- ==================
     --queremos que acepte varias asignaciones
-    | '(' "let" '(' ASABindings ')' ASA ')' { Let $4 $6} -- no distingue si es ligada o la def
+    | '(' "let" '(' ASABindings ')' ASA ')' { Let $4 $6} 
+    | '(' "let*" '(' ASABindings ')' ASA ')' { LetStar $4 $6} 
+
+    -- ==================
+    -- listas
+    -- estas ya son propias del lenguaje 
+    -- ==================
+    | '(' "head" ASA ')' { Head $3 }
+    | '(' "tail" ASA ')' { Tail $3 }
+
+    | '[' ']' {List []} --el argumetno es la lista vacia propia de haskell primero va este caso
+    | '[' Listitems ']' {List $2}
+
+    --algo del nucleo que se sugiere 
+    | "nil" { Nil }
+    | '(' "cons" ASA ASA ')' { Cons $3 $4 }
 
 
+Listitems : ASA { [$1] }
+        | ASA ',' Listitems { $1 : $3}
 
 
-    --listas 
-ASAExprs : {- empty -} {[]} --se necesita el caso base para empezar a concatenar y poder tener listas
+    --listas de ASAS para variadicos
+--se necesita el caso base para empezar a concatenar y poder tener listas
+ASAExprs : {- empty -} {[]} 
     | ASA ASAExprs {$1 : $2}
 
     --tupla para las asignaciones
 ASABindings : {- empty -} { [] }
-    | '(' var ASA ')' ASABindings { ($2 , $3) : $5} -- asi nos deshacemos de Var en la parte de definiciones y no hay confusiones pues son puros strings
+    | '(' var ASA ')' ASABindings { ($2 , $3) : $5} -- asi nos deshacemos de Var en la parte de definiciones y no hay confusiones pues son solo strings
     |  var ASA {[($1, $2)]}
+
+
+
 
 
 
@@ -160,13 +193,24 @@ data ASA
     -- logicos
     -- ==================
     | Not ASA
-    --listas
-    | List [ASA]
+    | If ASA ASA ASA
 
 
 
     --cosas con let
     | Let [(String, ASA)] ASA 
+    | LetStar [(String, ASA)] ASA 
     | Var String
+
+    -- ==================
+    -- listas
+    -- ==================
+    | List [ASA]
+    | Tail ASA
+    | Head ASA
+
+    --nucleo
+    | Nil
+    | Cons ASA ASA
     deriving (Show)
 }

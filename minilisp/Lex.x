@@ -15,6 +15,8 @@ tokens :-
     $white+              ;
     \(                      {\_ -> TokenPA} -- donde \_ significa que no hay parametros
     \)                      {\_ -> TokenPC}
+    \[                      {\_ -> TokenCA} --corchete que abre
+    \]                      {\_ -> TokenCC} --corchete que cierra
     -- ==================
     -- aritmeticos
     -- ==================
@@ -27,7 +29,12 @@ tokens :-
     sqrt                    {\_ -> TokenSqrt}
     expt                    {\_ -> TokenExpt}
 
-    $digit+                 {\s -> TokenNum (read s) } --
+    -- ==================
+    -- listas
+    -- ==================
+    ","                     {\_ -> TokenComma}
+    head                    {\_ -> TokenHead}
+    tail                    {\_ -> TokenTail}
 
     -- ==================
     -- pares ordenados 
@@ -51,20 +58,24 @@ tokens :-
     -- lo poneos con comillas pues '#' es parte de la sintaxis geenral de un regex
     "#t"                    {\_ -> TokenBool True}
     "#f"                    {\_ -> TokenBool False}
+    if                     {\_ -> TokenIf}
 
     -- ==================
     -- funciones
     -- ==================
 --agregamos los relacionados al let
     let                     {\_ -> TokenLet }
-    --regex del var
-    [a-zA-z][a-zA-Z0-9]*    {\s -> TokenVar s}
-
+    let\*                   {\_ -> TokenLetStar }
 
     -- ==================
-    -- otros
+    -- nuestras primeras nociones de nucleo
     -- ==================
-    ","                     {\_ -> TokenComma}
+    nil                     {\_ -> TokenNil}
+    cons                    {\_ -> TokenCons}
+
+    --regex del var y num
+    $digit+                 {\s -> TokenNum (read s) } --
+    [a-zA-Z][a-zA-Z0-9]*    {\s -> TokenVar s}
 
     
 
@@ -111,6 +122,7 @@ data Token
     -- logicos
     -- ==================
     | TokenNot          
+    | TokenIf
     | TokenPA          
     | TokenPC         
 
@@ -121,11 +133,22 @@ data Token
     -- ==================
     -- relacionado con let
     | TokenLet
-    | TokenVar String
+    | TokenLetStar
     -- ==================
-    -- otros 
+    -- listas 
     -- ==================
     | TokenComma
+    | TokenCA
+    | TokenCC
+    | TokenHead
+    | TokenTail
+
+    -- ==================
+    -- nuestras primeras nociones de nucleo
+    -- ==================
+    | TokenCons
+    | TokenNil
+    | TokenVar String
 
     deriving (Show)
 
