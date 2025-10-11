@@ -51,7 +51,7 @@ import Lex (Token(..), lexer)
     -- ==================
     --cosas con let
     "let" { TokenLet }
-    var  {TokenVar $$} -- obtenemos el nombre de la variable
+    var  {TokenVar $$} -- obtenemos el nombre de la variable (i.e. que ya es String?)
 
     -- ==================
     -- otros
@@ -100,7 +100,8 @@ ASA : int {Num $1} -- estas ya son
     -- ==================
     -- funciones
     -- ==================
-    | '(' "let" '(' ASA ASA ')' ASA ')' { Let $4 $5 $7} -- no distingue si es ligada o la def
+    --queremos que acepte varias asignaciones
+    | '(' "let" '(' ASABindings ')' ASA ')' { Let $4 $6} -- no distingue si es ligada o la def
 
 
 
@@ -109,6 +110,10 @@ ASA : int {Num $1} -- estas ya son
 ASAExprs : {- empty -} {[]} --se necesita el caso base para empezar a concatenar y poder tener listas
     | ASA ASAExprs {$1 : $2}
 
+    --tupla para las asignaciones
+ASABindings : {- empty -} { [] }
+    | '(' var ASA ')' ASABindings { ($2 , $3) : $5} -- asi nos deshacemos de Var en la parte de definiciones y no hay confusiones pues son puros strings
+    |  var ASA {[($1, $2)]}
 
 
 
@@ -161,7 +166,7 @@ data ASA
 
 
     --cosas con let
-    | Let ASA ASA ASA
+    | Let [(String, ASA)] ASA 
     | Var String
     deriving (Show)
 }
