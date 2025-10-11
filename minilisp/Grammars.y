@@ -18,10 +18,26 @@ import Lex (Token(..), lexer)
     '-' { TokenSub }
     '*' { TokenMult}
     '/' { TokenDiv}
-    'add1'{ TokenAdd1}
-    'sub1'{ TokenSub1}
-    'sqrt'{ TokenSqrt}
-    'expt'{ TokenExpt}
+    'add1' { TokenAdd1}
+    'sub1' { TokenSub1}
+    'sqrt' { TokenSqrt}
+    'expt' { TokenExpt}
+
+    -- ==================
+    -- pares ordenados
+    -- ==================
+    'fst' {TokenFst}
+    'snd' {TokenSnd}
+
+    -- ==================
+    -- comparadores
+    -- ==================
+    '='  { TokenEq }
+    '<'  { TokenLt }
+    '>'  { TokenGt }
+    '<=' { TokenLeq }
+    '>=' { TokenGeq }
+    '!=' { TokenNeq }
     -- ==================
     -- logicos
     -- ==================
@@ -36,6 +52,12 @@ import Lex (Token(..), lexer)
     --cosas con let
     "let" { TokenLet }
     var  {TokenVar $$} -- obtenemos el nombre de la variable
+
+    -- ==================
+    -- otros
+    -- ==================
+    ',' {TokenComma}
+
 
 
 
@@ -56,6 +78,22 @@ ASA : int {Num $1} -- estas ya son
     | '(' 'sqrt' ASAExprs ')' {Sqrt $3}
     | '(' 'expt' ASAExprs ')' {Expt $3}
     -- ==================
+    -- pares ordenados 
+    -- ==================
+    | '(' ASA ',' ASA ')' {Pair $2 $4}
+    | '(' 'fst' ASA ')' {Fst $3}
+    | '(' 'snd' ASA ')' {Snd $3}
+
+    -- ==================
+    -- comparadores 
+    -- ==================
+    | '(' '=' ASAExprs ')' {Eq $3}
+    | '(' '<' ASAExprs ')' {Lt $3}
+    | '(' '>' ASAExprs ')' {Gt $3}
+    | '(' '<=' ASAExprs ')' {Leq $3}
+    | '(' '>=' ASAExprs ')' {Geq $3}
+    | '(' '!=' ASAExprs ')' {Neq $3}
+    -- ==================
     -- logicos
     -- ==================
     | '(' "not" ASA ')' {Not $3}
@@ -63,6 +101,7 @@ ASA : int {Num $1} -- estas ya son
     -- funciones
     -- ==================
     | '(' "let" '(' ASA ASA ')' ASA ')' { Let $4 $5 $7} -- no distingue si es ligada o la def
+
 
 
 
@@ -95,6 +134,23 @@ data ASA
     | Sub1 [ASA]
     | Sqrt [ASA]
     | Expt [ASA]
+    -- ==================
+    -- pares ordenados
+    -- ==================
+    | Pair ASA ASA
+    | Fst ASA
+    | Snd ASA
+    -- ==================
+    -- comparadores 
+    --  ponemos que significa cada uno para que no haya confusiones
+    -- ==================
+    | Eq [ASA]   -- =
+    | Lt [ASA]   -- 
+    | Gt [ASA]   -- >
+    | Leq [ASA]  -- <=
+    | Geq [ASA]  -- >=
+    | Neq [ASA]  -- !=
+
     -- ==================
     -- logicos
     -- ==================

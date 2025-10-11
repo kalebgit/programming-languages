@@ -28,6 +28,22 @@ tokens :-
     expt                    {\_ -> TokenExpt}
 
     $digit+                 {\s -> TokenNum (read s) } --
+
+    -- ==================
+    -- pares ordenados 
+    -- ==================
+    fst                    {\_ -> TokenFst}
+    snd                    {\_ -> TokenSnd}
+
+    -- ==================
+    -- comparadores 
+    -- ==================
+    "!="                    {\_ -> TokenNeq}
+    "<="                    {\_ -> TokenLeq}
+    ">="                    {\_ -> TokenGeq}
+    "="                     {\_ -> TokenEq}
+    "<"                     {\_ -> TokenLt}
+    ">"                     {\_ -> TokenGt}
     -- ==================
     -- logicos
     -- ==================
@@ -44,6 +60,11 @@ tokens :-
     --regex del var
     [a-zA-z][a-zA-Z0-9]*    {\s -> TokenVar s}
 
+
+    -- ==================
+    -- otros
+    -- ==================
+    ","                     {\_ -> TokenComma}
 
     
 
@@ -69,19 +90,42 @@ data Token
     | TokenSub1
     | TokenSqrt
     | TokenExpt
+
+    -- ==================
+    -- pares ordenados
+    -- ==================
+    | TokenFst
+    | TokenSnd
+
+    -- ==================
+    -- comparadores
+    -- ==================
+    | TokenEq   -- =
+    | TokenLt   -- <
+    | TokenGt   -- >
+    | TokenLeq  -- <=
+    | TokenGeq  -- >=
+    | TokenNeq  -- !=
+
     -- ==================
     -- logicos
     -- ==================
-    | TokenNot
-    | TokenPA -- parentesis que abre
-    | TokenPC -- parentesis que cierra
+    | TokenNot          
+    | TokenPA          
+    | TokenPC         
+
+
 
     -- ==================
     -- funciones
     -- ==================
--- relacionado con let
+    -- relacionado con let
     | TokenLet
     | TokenVar String
+    -- ==================
+    -- otros 
+    -- ==================
+    | TokenComma
 
     deriving (Show)
 
