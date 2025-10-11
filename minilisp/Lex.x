@@ -15,14 +15,30 @@ tokens :-
     $white+              ;
     \(                      {\_ -> TokenPA} -- donde \_ significa que no hay parametros
     \)                      {\_ -> TokenPC}
+    -- ==================
+    -- aritmeticos
+    -- ==================
     \+                      {\_ -> TokenSum}
     \-                      {\_ -> TokenSub}
+    \*                      {\_ -> TokenMult}
+    \/                      {\_ -> TokenDiv}
+    add1                    {\_ -> TokenAdd1}
+    sub1                    {\_ -> TokenSub1}
+    sqrt                    {\_ -> TokenSqrt}
+    expt                    {\_ -> TokenExpt}
+
+    $digit+                 {\s -> TokenNum (read s) } --
+    -- ==================
+    -- logicos
+    -- ==================
     not                     {\_ -> TokenNot}
     -- lo poneos con comillas pues '#' es parte de la sintaxis geenral de un regex
     "#t"                    {\_ -> TokenBool True}
     "#f"                    {\_ -> TokenBool False}
-    $digit+                 {\s -> TokenNum (read s) } --
 
+    -- ==================
+    -- funciones
+    -- ==================
 --agregamos los relacionados al let
     let                     {\_ -> TokenLet }
     --regex del var
@@ -42,12 +58,27 @@ tokens :-
 data Token 
     = TokenNum Int
     | TokenBool Bool
+    -- ==================
+    -- aritmeticos
+    -- ==================
     | TokenSum
     | TokenSub
+    | TokenMult
+    | TokenDiv
+    | TokenAdd1
+    | TokenSub1
+    | TokenSqrt
+    | TokenExpt
+    -- ==================
+    -- logicos
+    -- ==================
     | TokenNot
     | TokenPA -- parentesis que abre
     | TokenPC -- parentesis que cierra
 
+    -- ==================
+    -- funciones
+    -- ==================
 -- relacionado con let
     | TokenLet
     | TokenVar String

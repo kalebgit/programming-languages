@@ -11,13 +11,28 @@ import Lex (Token(..), lexer)
     --los transformamos 
     int { TokenNum $$ }
     bool { TokenBool $$ }
+    -- ==================
+    -- aritmeticos
+    -- ==================
     '+' { TokenSum }
     '-' { TokenSub }
+    '*' { TokenMult}
+    '/' { TokenDiv}
+    'add1'{ TokenAdd1}
+    'sub1'{ TokenSub1}
+    'sqrt'{ TokenSqrt}
+    'expt'{ TokenExpt}
+    -- ==================
+    -- logicos
+    -- ==================
     "not" { TokenNot }
     '(' { TokenPA }
     ')' { TokenPC }
 
 
+    -- ==================
+    -- funciones
+    -- ==================
     --cosas con let
     "let" { TokenLet }
     var  {TokenVar $$} -- obtenemos el nombre de la variable
@@ -29,18 +44,34 @@ import Lex (Token(..), lexer)
 ASA : int {Num $1} -- estas ya son 
     | bool {Boolean $1} -- ya es la sintaxis del lenguaje anfitrion
     | var {Var $1}
-    | '(' '+' ASA ASA ')' {Add $3 $4}
-    | '(' '-' ASA ASA ')' {Sub $3 $4}
+    -- ==================
+    -- aritmeticos
+    -- ==================
+    | '(' '+' ASAExprs ')' {Add $3}
+    | '(' '-' ASAExprs ')' {Sub $3}
+    | '(' '*' ASAExprs ')' {Mult $3}
+    | '(' '/' ASAExprs ')' {Div $3}
+    | '(' 'add1' ASAExprs ')' {Add1 $3}
+    | '(' 'sub1' ASAExprs ')' {Sub1 $3}
+    | '(' 'sqrt' ASAExprs ')' {Sqrt $3}
+    | '(' 'expt' ASAExprs ')' {Expt $3}
+    -- ==================
+    -- logicos
+    -- ==================
     | '(' "not" ASA ')' {Not $3}
+    -- ==================
+    -- funciones
+    -- ==================
+    | '(' "let" '(' ASA ASA ')' ASA ')' { Let $4 $5 $7} -- no distingue si es ligada o la def
 
 
 
-    --cosas con let: no se si esta bien que reciba asas 
-    -- no se como ponerlo explicito que solo puedan ser vars
-    | '(' "let" '(' ASA ASA ')' ASA ')' { Let $4 $5 $7}
-    -- TODO: hay un error pues en el cuerpo
-    -- si hay identificadores no se cambia a Id(a) 
-    -- o algo para distinguir si es var ligada o no, pero eso se sabe con la posicion no?
+    --listas 
+ASAExprs : {- empty -} {[]} --se necesita el caso base para empezar a concatenar y poder tener listas
+    | ASA ASAExprs {$1 : $2}
+
+
+
 
 
 
@@ -53,9 +84,23 @@ parseError _ = error "Parse error"
 data ASA 
     = Num Int
     | Boolean Bool
-    | Add ASA ASA
-    | Sub ASA ASA
+    -- ==================
+    -- aritmeticos
+    -- ==================
+    | Add [ASA]
+    | Sub [ASA]
+    | Mult [ASA]
+    | Div [ASA]
+    | Add1 [ASA]
+    | Sub1 [ASA]
+    | Sqrt [ASA]
+    | Expt [ASA]
+    -- ==================
+    -- logicos
+    -- ==================
     | Not ASA
+    --listas
+    | List [ASA]
 
 
 
