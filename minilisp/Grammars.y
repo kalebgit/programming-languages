@@ -42,8 +42,8 @@ import Lex (Token(..), lexer)
     -- ==================
     -- logicos
     -- ==================
-    'not' { TokenNot }
-    'if' {TokenIf }
+    "not" { TokenNot }
+    "if" {TokenIf }
     '(' { TokenPA }
     ')' { TokenPC }
 
@@ -52,8 +52,11 @@ import Lex (Token(..), lexer)
     -- funciones
     -- ==================
     --cosas con let
-    'let' { TokenLet }
-    'let*' {TokenLetStar}
+   -- "let" { TokenLet }
+   -- "let*" {TokenLetStar}
+    --cosas con cond
+    "cond" { TokenCond }
+    "else" {TokenElse}
 
     -- ==================
     -- listas
@@ -61,12 +64,12 @@ import Lex (Token(..), lexer)
     ',' {TokenComma}
     '[' {TokenCA}
     ']' {TokenCC}
-    'head' {TokenHead}
-    'tail' {TokenTail}
+    "head" {TokenHead}
+    "tail" {TokenTail}
 
 --nucleo
-    'nil' {TokenNil}
-    'cons' {TokenCons}
+    "nil" {TokenNil}
+    "cons" {TokenCons}
 
 
     var  {TokenVar $$} -- obtenemos el nombre de la variable (i.e. que ya es String?)
@@ -113,8 +116,11 @@ ASA : int {Num $1} -- estas ya son
     -- funciones
     -- ==================
     --queremos que acepte varias asignaciones
-    | '(' "let" '(' ASABindings ')' ASA ')' { Let $4 $6} 
-    | '(' "let*" '(' ASABindings ')' ASA ')' { LetStar $4 $6} 
+   -- | '(' "let" '(' ASABindings ')' ASA ')' { Let $4 $6} 
+   -- | '(' "let*" '(' ASABindings ')' ASA ')' { LetStar $4 $6}
+    -- agregamos app y CondElse
+    | '(' ASA  ASA ')' { App $2 $3} 
+    | '(' "cond" '(' ASAExprs ')' ASA "else" ASA ')' { CondElse $4 $6 $8} 
 
     -- ==================
     -- listas
@@ -139,16 +145,6 @@ Listitems : ASA { [$1] }
 --se necesita el caso base para empezar a concatenar y poder tener listas
 ASAExprs : {- empty -} {[]} 
     | ASA ASAExprs {$1 : $2}
-
-    --tupla para las asignaciones
-ASABindings : {- empty -} { [] }
-    | '(' var ASA ')' ASABindings { ($2 , $3) : $5} -- asi nos deshacemos de Var en la parte de definiciones y no hay confusiones pues son solo strings
-    |  var ASA {[($1, $2)]}
-
-
-
-
-
 
 
 
@@ -198,9 +194,12 @@ data ASA
 
 
     --cosas con let
-    | Let [(String, ASA)] ASA 
-    | LetStar [(String, ASA)] ASA 
+   -- | Let [(String, ASA)] ASA 
+   -- | LetStar [(String, ASA)] ASA 
     | Var String
+    -- app y cond
+    | App ASA ASA 
+    | CondElse [ASA] ASA ASA
 
     -- ==================
     -- listas
