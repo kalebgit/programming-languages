@@ -71,6 +71,9 @@ tokens :-
     -- agregamos los relacionados con cond
     cond                     {\_ -> TokenCond }
     else                   {\_ -> TokenElse }
+    -- agragamos lambda
+    lambda                   {\_ -> TokenLambda }
+    
     -- ==================
     -- nuestras primeras nociones de nucleo
     -- ==================
@@ -140,6 +143,8 @@ data Token
     -- relacionadas con cond
     | TokenCond
     | TokenElse
+    -- Lambda
+    | TokenLambda
     -- ==================
     -- listas 
     -- ==================
