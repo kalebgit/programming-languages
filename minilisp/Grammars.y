@@ -208,9 +208,5 @@ data ASA
     | List [ASA]
     | Tail ASA
     | Head ASA
-
-    --nucleo
-    | Nil
-    | Cons ASA ASA
     deriving (Show)
 }
