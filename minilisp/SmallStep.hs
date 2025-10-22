@@ -275,16 +275,20 @@ smallStep (ConsV expr1 expr2) env = case expr2 of
         False -> case smallStep expr1 env of
             (expr1', env') -> (ConsV expr1' NilV, env')
     
+    --si la expr2 no es un Nil entonces primero debemos evaluar el lado izquierdo para despues pasar con expr2
     ConsV _ _ -> case isValue expr1 of
         -- expr1 ya es valor, mantener como está (no tocar expr2)
-        True -> (ConsV expr1 expr2, env)
+        True -> case smallStep expr2 env of
+            (expr2', env') -> (ConsV expr1 expr2', env') --NO SE SI DEBEMOS OMITIR EL AMBIENTE CAMBIADO
         -- expr1 necesita evaluación, dar UN PASO
         False -> case smallStep expr1 env of
             (expr1', env') -> (ConsV expr1' expr2, env')
     
-    -- expr2 no es NilV ni ConsV, debe evaluarse para verificar estructura
-    _ -> case smallStep expr2 env of
-        (expr2', env') -> (ConsV expr1 expr2', env')
+    --creo que ya no es necesario esta parte XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    -- -- expr2 no es NilV ni ConsV, debe evaluarse para verificar estructura
+    -- _ -> case smallStep expr2 env of
+    --     (expr2', env') -> (ConsV expr1 expr2', env')
+    --- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 
 --ver esta version y la diferencia
