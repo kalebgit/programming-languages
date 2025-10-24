@@ -28,24 +28,6 @@ smallStep NilV env = (NilV, env)
     -- ==================
 
 -- ============================= SUMA =====================================================================================
-    --PRIMER DISENIO (CREO QUE ES MEJOR EL DE ABAJO)
--- smallStep (AddV (NumV n) (NumV m)) env = (NumV (n + m), env)
--- smallStep (AddV (NumV n) d) env = 
---     case smallStep d env of
---         --se comento pues al llamar smallStep se anula la propiedad de paso pequenio porque resuelvo todo en una llamda
---         --lo cual no queremos que pase ***
---         -- (d', env') -> smallStep (AddV (NumV n) d') env -- no se modifica el ambiente 
---         (d', env') -> (AddV (NumV n) d', env) -- no se modifica el ambiente 
---         _ -> error "no se resolvio la expresion"
--- smallStep (AddV i d) env = 
---     case smallStep i env of
---         -- ***
---         -- (i', env') -> smallStep (AddV i' d) env -- no se modifica el ambiente 
---         (i', env') -> (AddV i' d, env) -- no se modifica el ambiente 
---         _ -> error "no se resolvio la expresion"
-
-
-
 smallStep (AddV expr1 expr2) env = case (expr1, expr2) of
     (NumV n, NumV m) -> (NumV (n + m), env)
     
@@ -58,6 +40,13 @@ smallStep (AddV expr1 expr2) env = case (expr1, expr2) of
 
 
 -- ============================= RESTA =====================================================================================
+
+-- ========= ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======= 
+-- ========= ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======= 
+    -- TODO: resta con un argumetno
+-- ========= ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======= 
+-- ========= ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======= 
+    
 smallStep (SubV expr1 expr2) env = case (expr1, expr2) of
     (NumV n, NumV m) -> (NumV (n - m), env)
     
@@ -177,6 +166,17 @@ smallStep (NeqV expr1 expr2) env = case (expr1, expr2) of
       -- ==================
     -- logicos
     -- ==================
+-- ============================= AND =====================================================================================
+smallStep (AndV expr1 expr2) env = case (expr1, expr2) of
+    (BooleanV b1, BooleanV b2) -> (BooleanV (b1 && b2), env)
+
+    (BooleanV b1, d) -> case smallStep d env of
+        (d', env') -> (AndV (BooleanV b1) d', env')
+
+    (i, d) -> case smallStep i env of
+        (i', env') -> (AndV i' d, env')
+-- =========================================================================================================================
+
 
 -- ============================= NOT =====================================================================================
 smallStep (NotV expr) env = case expr of
@@ -203,9 +203,9 @@ smallStep (IfV cond thenExpr elseExpr) env = case cond of
 
 
 
-      -- ==================
-    -- pares ordenados
-    -- ==================
+-- ==================
+-- comparadores
+-- ==================
 -- ============================= PAR =====================================================================================
 smallStep (PairV first second) env = case (isValue first, isValue second) of
     (True, True) -> (PairV first second, env)
@@ -289,29 +289,6 @@ smallStep (ConsV expr1 expr2) env = case expr2 of
     -- _ -> case smallStep expr2 env of
     --     (expr2', env') -> (ConsV expr1 expr2', env')
     --- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-
---ver esta version y la diferencia
--- smallStep (ConsV expr1 expr2) env = case expr2 of
---     NilV -> case isValue expr1 of
---         -- expr1 ya es valor, lista completa
---         True -> (ConsV expr1 NilV, env)
---         -- expr1 necesita evaluación, dar UN PASO
---         False -> case smallStep expr1 env of
---             (expr1', env') -> (ConsV expr1' NilV, env')
-    
---     ConsV _ _ -> case isValue expr1 of
---         -- expr1 ya es valor, EVALUAR EL RESTO (expr2)
---         True -> case smallStep expr2 env of
---             (expr2', env') -> (ConsV expr1 expr2', env')
---         -- expr1 necesita evaluación, dar UN PASO
---         False -> case smallStep expr1 env of
---             (expr1', env') -> (ConsV expr1' expr2, env')
-    
---     -- expr2 no es NilV ni ConsV, evaluarlo
---     _ -> case smallStep expr2 env of
---         (expr2', env') -> (ConsV expr1 expr2', env')
-
 -- =========================================================================================================================
 
 
@@ -369,3 +346,5 @@ isValue expr = case expr of
     -- Una lista es valor solo si TODOS sus elementos son valores
     ConsV v1 rest -> isValue v1 && isValue rest
     _ -> False
+
+

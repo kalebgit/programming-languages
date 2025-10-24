@@ -42,6 +42,7 @@ import Lex (Token(..), lexer)
     -- ==================
     -- logicos
     -- ==================
+    'and' { TokenAnd }
     'not' { TokenNot }
     'if' {TokenIf }
     '(' { TokenPA }
@@ -107,28 +108,25 @@ ASA : int {Num $1} -- estas ya son
     -- ==================
     -- logicos
     -- ==================
-    | '(' "not" ASA ')' {Not $3}
-    | '(' "if" ASA ASA ASA')' {If $3 $4 $5}
+    | '(' 'and' ASAExprs ')' {And $3}
+    | '(' 'not' ASA ')' {Not $3}
+    | '(' 'if' ASA ASA ASA')' {If $3 $4 $5}
     -- ==================
     -- funciones
     -- ==================
     --queremos que acepte varias asignaciones
-    | '(' "let" '(' ASABindings ')' ASA ')' { Let $4 $6} 
-    | '(' "let*" '(' ASABindings ')' ASA ')' { LetStar $4 $6} 
+    | '(' 'let' '(' ASABindings ')' ASA ')' { Let $4 $6} 
+    | '(' 'let*' '(' ASABindings ')' ASA ')' { LetStar $4 $6} 
 
     -- ==================
     -- listas
     -- estas ya son propias del lenguaje 
     -- ==================
-    | '(' "head" ASA ')' { Head $3 }
-    | '(' "tail" ASA ')' { Tail $3 }
+    | '(' 'head' ASA ')' { Head $3 }
+    | '(' 'tail' ASA ')' { Tail $3 }
 
     | '[' ']' {List []} --el argumetno es la lista vacia propia de haskell primero va este caso
     | '[' Listitems ']' {List $2}
-
-    --algo del nucleo que se sugiere 
-    | "nil" { Nil }
-    | '(' "cons" ASA ASA ')' { Cons $3 $4 }
 
 
 Listitems : ASA { [$1] }
@@ -192,6 +190,7 @@ data ASA
     -- ==================
     -- logicos
     -- ==================
+    | And [ASA] -- es el and de todos los de la lista por ejemplo AND [True, False, True] ->  False
     | Not ASA
     | If ASA ASA ASA
 

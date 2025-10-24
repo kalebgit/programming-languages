@@ -3,49 +3,52 @@ module Desugar where
 import Grammars
 
 data ASAValues
-  = IdV String
-  | NumV Int
-  | BooleanV Bool
-      -- ==================
-    -- aritmeticos
-    -- ==================
-  | AddV ASAValues ASAValues
-  | SubV ASAValues ASAValues
-  | MultV ASAValues ASAValues
-  | DivV ASAValues ASAValues
-      -- ==================
-    -- logicos
-    -- ==================
-  | NotV ASAValues
-  | IfV ASAValues ASAValues ASAValues
-      -- ==================
-    -- comparadores 
-    --  ponemos que significa cada uno para que no haya confusiones
-    -- ==================
-  | EqV ASAValues ASAValues
-  | LtV ASAValues ASAValues
-  | GtV ASAValues ASAValues
-  | LeqV ASAValues ASAValues
-  | GeqV ASAValues ASAValues
-  | NeqV ASAValues ASAValues
-      -- ==================
-    -- pares ordenados
-    -- ==================
-  | PairV ASAValues ASAValues
-  | FstV ASAValues
-  | SndV ASAValues
+    = IdV String
+    | NumV Int
+    | BooleanV Bool
+        -- ==================
+        -- aritmeticos
+        -- ==================
+    | AddV ASAValues ASAValues
+    | SubV ASAValues ASAValues
+    | MultV ASAValues ASAValues
+    | DivV ASAValues ASAValues
+        -- ==================
+        -- logicos
+        -- ==================
+    | AndV ASAValues ASAValues
+    | NotV ASAValues
+    | IfV ASAValues ASAValues ASAValues
+        -- ==================
+        -- comparadores 
+        --  ponemos que significa cada uno para que no haya confusiones
+        -- ==================
+    | EqV ASAValues ASAValues
+    | LtV ASAValues ASAValues
+    | GtV ASAValues ASAValues
+    | LeqV ASAValues ASAValues
+    | GeqV ASAValues ASAValues
+    | NeqV ASAValues ASAValues
+        -- ==================
+        -- pares ordenados
+        -- ==================
+    | PairV ASAValues ASAValues
+    | FstV ASAValues
+    | SndV ASAValues
 
-    -- ==================
-    -- listas
-    -- ==================
-  | NilV
-  | ConsV ASAValues ASAValues
-  | HeadV ASAValues
-  | TailV ASAValues
-      --cosas con let
-  | FunV String ASAValues
-  | AppV ASAValues ASAValues
-  deriving (Show)
+        -- ==================
+        -- listas
+        -- ==================
+    | NilV
+    | ConsV ASAValues ASAValues
+    | HeadV ASAValues
+    | TailV ASAValues
+        --cosas con let
+    | FunV String ASAValues
+    | AppV ASAValues ASAValues
+    deriving (Show)
+
+
 
 -- Función auxiliar para operaciones variádicas binarias
 desugarBinary :: (ASAValues -> ASAValues -> ASAValues) -> [ASA] -> Maybe ASAValues
@@ -55,6 +58,24 @@ desugarBinary op [x, y] = Just (op (desugar x) (desugar y)) -- necesitamos poner
 desugarBinary op (x:xs) = case desugarBinary op xs of
     Just inner_expression -> Just (op (desugar x) inner_expression) --es decir que vamosm poniendo todas las expresiones resultas dentro del op
     Nothing -> Nothing
+
+
+
+desugarBinaryCompare :: (ASAValues -> ASAValues -> ASAValues) -> [ASA] -> ASAValues
+desugarBinaryCompare _ [] = error "Comparador requiere al menos 2 argumentos" -- como necesitamos al menos dos argumentso devolvemos nada (TODO: no se si esta bien implementado esto)
+desugarBinaryCompare _ [_] = error "Comparador requiere al menos 2 argumentos"
+desugarBinaryCompare op [x, y] = op (desugar x) (desugar y)
+--en este caso queremos transformarlo a un AndV con lista de paraemtros y su longitud al menos debe ser 3, pues con 2 solo regresa el 
+-- la operacion normal
+desugarBinaryCompare op (expr1:expr2:expr3:rest) =
+        --aqui ya desazucarizamos el elemento a la derecha
+    -- queremos que cuando tenga Lt [1, 2, 3, 4]
+    -- se resuelva a AndV [(LtV (NumV 1) (NumV 2)), (LtV (NumV 2) (NumV 3)), ...]
+    AndV
+        (op (desugar expr1) (desugar expr2))
+        (desugarBinaryCompare op (expr2:expr3:rest))
+
+
 
 -- Función auxiliar para operaciones variádicas unarias
 -- Vemos que en la defincion del primer argumetno de la funcion es de tipo unaria
@@ -113,32 +134,36 @@ desugar (Expt [base, exp]) = error "Expt no implementado aún"
 -- TODO: Agregar ExptV a ASAValues
 desugar (Expt _) = error "Expt requiere exactamente 2 argumentos"
 
+
+
+
+
+
 -- ==================
 -- comparadores
 -- ==================
-desugar (Eq exprs) = case desugarBinary EqV exprs of
-    Just result -> result
-    Nothing -> error "Eq requiere al menos 2 argumentos"
 
-desugar (Lt exprs) = case desugarBinary LtV exprs of
-    Just result -> result
-    Nothing -> error "Lt requiere al menos 2 argumentos"
 
-desugar (Gt exprs) = case desugarBinary GtV exprs of
-    Just result -> result
-    Nothing -> error "Gt requiere al menos 2 argumentos"
+desugar (Eq exprs) = case desugarBinaryCompare EqV exprs of
+    result -> result
 
-desugar (Leq exprs) = case desugarBinary LeqV exprs of
-    Just result -> result
-    Nothing -> error "Leq requiere al menos 2 argumentos"
+desugar (Lt exprs) = case desugarBinaryCompare LtV exprs of
+    result -> result
 
-desugar (Geq exprs) = case desugarBinary GeqV exprs of
-    Just result -> result
-    Nothing -> error "Geq requiere al menos 2 argumentos"
+desugar (Gt exprs) = case desugarBinaryCompare GtV exprs of
+    result -> result
 
-desugar (Neq exprs) = case desugarBinary NeqV exprs of
-    Just result -> result
-    Nothing -> error "Neq requiere al menos 2 argumentos"
+desugar (Leq exprs) = case desugarBinaryCompare LeqV exprs of
+    result -> result
+
+desugar (Geq exprs) = case desugarBinaryCompare GeqV exprs of
+    result -> result
+
+desugar (Neq exprs) = case desugarBinaryCompare NeqV exprs of
+    result -> result
+
+
+
 
 -- ==================
 -- lógicos
@@ -146,6 +171,12 @@ desugar (Neq exprs) = case desugarBinary NeqV exprs of
 desugar (Not expr) = NotV (desugar expr)
 
 desugar (If cond thenExpr elseExpr) = IfV (desugar cond) (desugar thenExpr) (desugar elseExpr)
+
+
+--el and que faltaba para reducir los operadores de comparacion
+desugar (And exprs) = case desugarBinary AndV exprs of
+    Just result -> result
+    Nothing -> error "And requiere al menos 2 argumentos"
 
 -- ==================
 -- pares ordenados
@@ -161,6 +192,7 @@ desugar (Snd expr) = SndV (desugar expr)
 -- ==================
 desugar (List []) = NilV
 desugar (List (x:xs)) = ConsV (desugar x) (desugar (List xs))
+
 
 -- Núcleo de listas
 desugar (Head expr) = HeadV (desugar expr)

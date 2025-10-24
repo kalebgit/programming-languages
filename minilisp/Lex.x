@@ -54,6 +54,9 @@ tokens :-
     -- ==================
     -- logicos
     -- ==================
+    --tengo que agregar AND para el resultado de comparadores
+    and                     {\_ -> TokenAnd}
+
     not                     {\_ -> TokenNot}
     -- lo poneos con comillas pues '#' es parte de la sintaxis geenral de un regex
     "#t"                    {\_ -> TokenBool True}
@@ -121,6 +124,7 @@ data Token
     -- ==================
     -- logicos
     -- ==================
+    | TokenAnd
     | TokenNot          
     | TokenIf
     | TokenPA          
