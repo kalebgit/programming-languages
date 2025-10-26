@@ -17,8 +17,11 @@ tokens :-
     \)                      {\_ -> TokenPC}
     \[                      {\_ -> TokenCA} --corchete que abre
     \]                      {\_ -> TokenCC} --corchete que cierra
-    -- regex para numeros
-    \-?$digit+              {\s -> TokenNum (read s) } -- Soporta numeros negativos(por eso de define antes que el \-)
+    -- ==================
+    -- Regex de numeros
+    -- ==================
+    \-?$digit+             {\s -> TokenNum (read s) } -- Soporta numeros negativos(por eso de define antes que el \-)
+
     -- ==================
     -- aritmeticos
     -- ==================
@@ -56,6 +59,9 @@ tokens :-
     -- ==================
     -- logicos
     -- ==================
+    --tengo que agregar AND para el resultado de comparadores
+    and                     {\_ -> TokenAnd}
+
     not                     {\_ -> TokenNot}
     -- lo poneos con comillas pues '#' es parte de la sintaxis geenral de un regex
     "#t"                    {\_ -> TokenBool True}
@@ -65,23 +71,23 @@ tokens :-
     -- ==================
     -- funciones
     -- ==================
-    -- agregamos los relacionados al let
+    --agregamos los relacionados al let
     let                     {\_ -> TokenLet }
     let\*                   {\_ -> TokenLetStar }
-    -- agregamos los relacionados con cond
+    
+    -- agregamos los demas 
     cond                     {\_ -> TokenCond }
     else                   {\_ -> TokenElse }
     -- agragamos lambda
-    lambda                   {\_ -> TokenLambda }
-    
+    lambda                   {\_ -> TokenLambda }                
     -- ==================
     -- nuestras primeras nociones de nucleo
     -- ==================
     nil                     {\_ -> TokenNil}
     cons                    {\_ -> TokenCons}
 
-    --regex del var(variables)
-    [a-zA-Z][a-zA-Z0-9_]*    {\s -> TokenVar s}
+    --regex del var
+    [a-zA-Z][a-zA-Z0-9]*    {\s -> TokenVar s}
 
     
 
@@ -127,6 +133,7 @@ data Token
     -- ==================
     -- logicos
     -- ==================
+    | TokenAnd
     | TokenNot          
     | TokenIf
     | TokenPA          
@@ -145,6 +152,7 @@ data Token
     | TokenElse
     -- Lambda
     | TokenLambda
+    
     -- ==================
     -- listas 
     -- ==================
