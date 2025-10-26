@@ -42,8 +42,9 @@ import Lex (Token(..), lexer)
     -- ==================
     -- logicos
     -- ==================
-    "not" { TokenNot }
-    "if" {TokenIf }
+    'and' { TokenAnd }
+    'not' { TokenNot }
+    'if' {TokenIf }
     '(' { TokenPA }
     ')' { TokenPC }
 
@@ -52,9 +53,9 @@ import Lex (Token(..), lexer)
     -- funciones
     -- ==================
     --cosas con let
-    "let" { TokenLet }
-    "let*" {TokenLetStar}
-    --cosas con cond
+    'let' { TokenLet }
+    'let*' {TokenLetStar}
+   --cosas con cond
     "cond" { TokenCond }
     "else" {TokenElse}
     -- lambda
@@ -66,12 +67,12 @@ import Lex (Token(..), lexer)
     ',' {TokenComma}
     '[' {TokenCA}
     ']' {TokenCC}
-    "head" {TokenHead}
-    "tail" {TokenTail}
+    'head' {TokenHead}
+    'tail' {TokenTail}
 
 --nucleo
-    "nil" {TokenNil}
-    "cons" {TokenCons}
+    'nil' {TokenNil}
+    'cons' {TokenCons}
 
 
     var  {TokenVar $$} -- obtenemos el nombre de la variable (i.e. que ya es String?)
@@ -119,14 +120,13 @@ ASA : int {Num $1} -- estas ya son
     -- funciones
     -- ==================
     --queremos que acepte varias asignaciones
-    | '(' "let" '(' ASABindings ')' ASA ')' { Let $4 $6} 
-    | '(' "let*" '(' ASABindings ')' ASA ')' { LetStar $4 $6}
+    | '(' 'let' '(' ASABindings ')' ASA ')' { Let $4 $6} 
+    | '(' 'let*' '(' ASABindings ')' ASA ')' { LetStar $4 $6}
     -- agregamos Cond
     | '(' "cond"  ASACond  "else" ASA  ')' { CondElse $3 $5}    
     -- agregamos lambda, app.
     | '(' "lambda" '(' ListVar ')'  ASA ')' { Lambda $4 $6 }			  
     | '(' ASA  ASAExprs ')' { App $2 $3} 
-
 
     -- ==================
     -- listas
@@ -145,15 +145,13 @@ Listitems : ASA { [$1] }
 
     --listas de ASAS para variadicos
 --se necesita el caso base para empezar a concatenar y poder tener listas
-ASAExprs : {- empty -} { [] } --ASA { [$1]} 
+ASAExprs : {- empty -} {[]} 
     | ASA ASAExprs {$1 : $2}
 
     --tupla para las asignaciones
 ASABindings : {- empty -} { [] }
-    | '(' var ASA ')' ASABindings { ($2 , $3) : $5} -- asi nos deshacemos de Var en la parte de definiciones y no hay confusiones pues son puros strings
+    | '(' var ASA ')' ASABindings { ($2 , $3) : $5} -- asi nos deshacemos de Var en la parte de definiciones y no hay confusiones pues son solo strings
     |  var ASA {[($1, $2)]}
-
---OpElse: '[' ASA ASA ']'  { $1 $2}
 
     --tupla para CondElse
 ASAC : '[' ASA ASA ']' { ($2, $3) }
@@ -166,6 +164,13 @@ ASACond : ASAC { [$1] }
     -- argumento para lambda
 ListVar: var ListVar  { $1 : $2}
     | var       {[$1]}
+
+
+
+
+
+
+
 
 
 {
@@ -221,8 +226,7 @@ data ASA
     | CondElse [(ASA, ASA)] ASA  
     -- app y lambda
     | Lambda [String] ASA   
-    | App ASA [ASA] 
-
+    | App ASA [ASA]   
 
     -- ==================
     -- listas

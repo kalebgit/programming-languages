@@ -4,6 +4,9 @@ import Desugar
 type Env = [(String, ASAValues)]
 smallStep :: ASAValues -> Env -> (ASAValues, Env)
 
+-- Buscamos la variable usando la funcion axuliar varLookup
+smallStep (IdV var) env = (varLookup var env, env)
+
 --como NumV se considera constructor debe ir entre parentesis
 smallStep (NumV n) env = (NumV n, env)
 smallStep (BooleanV b) env = (BooleanV b, env)
@@ -11,19 +14,8 @@ smallStep (BooleanV b) env = (BooleanV b, env)
 --cosas de listas
 smallStep NilV env = (NilV, env)
 
--- ========= ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======= 
--- ========= ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======= 
--- ========= ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======= 
--- ========= ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======= 
--- ========= ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======= 
-    -- TODO: Falta hacer el Id, lookup para la variable y aplicacion de funcion
--- ========= ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======= 
--- ========= ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======= 
--- ========= ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======= 
--- ========= ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======= 
--- ========= ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======== ======= 
 
-      -- ==================
+    -- ==================
     -- aritmeticos
     -- ==================
 
@@ -163,7 +155,7 @@ smallStep (NeqV expr1 expr2) env = case (expr1, expr2) of
 
 
 
-      -- ==================
+    -- ==================
     -- logicos
     -- ==================
 -- ============================= AND =====================================================================================
@@ -331,20 +323,79 @@ smallStep (TailV expr) env = case expr of
     -- Evaluar la expresión primero
     _ -> case smallStep expr env of
         (expr', env') -> (TailV expr', env')
--- =========================================================================================================================
 
 
 
+-- ============================================================================
+-- FunV, AppV (de esto se deriva los casos del let)
+-- ============================================================================
+
+
+smallStep (FunV p c) env = (ClosureV p c env , env) -- Creamos una cerradura para cada funcion
+
+-- Reglas para la Aplicación (AppV)
+smallStep (AppV f pr) env = case f of
+    
+    -- REGLA 2: Si la FUNCIÓN NO es un VALOR, (hay que reducirla).
+    _ | not (isValue f) -> 
+        case smallStep f env of
+            (f', env') -> (AppV f' pr, env')
+
+    -- f es un VALOR a partir de aquí. Debe ser una Clausura.
+    (ClosureV p c e) -> case pr of
+        
+        -- REGLA 3: Si el ARGUMENTO NO es un VALOR, redúcelo (f ya es valor).
+        _ | not (isValue pr) -> 
+            case smallStep pr env of
+                (pr', env') -> (AppV (ClosureV p c e) pr', env')
+                
+        -- REGLA 4: Beta-Reducción (f y pr son valores)
+        pr_val | isValue pr_val -> (resultValue, env)
+            where localEnv = (p, pr_val) : e
+            -- Se usa evalBody para evaluar COMPLETAMENTE el cuerpo
+            -- y obtener solo el valor, descartando el ambiente local.
+                  resultValue = evalBody c localEnv
+        
+    -- REGLA 5: Error de Tipo (Si f es un valor, pero no una ClosureV)
+    -- Esto maneja casos como (5 3).
+    _ -> error "Error de tipo: Se intentó aplicar un valor que no es una función (ClosureV)."
+
+-- evalBody :: ASAValues -> Env -> ASAValues
+-- Esta función se encarga de evaluar el cuerpo
+evalBody :: ASAValues -> Env -> ASAValues
+evalBody e env
+    | isValue e = e
+    | otherwise = evalBody e' env'  -- Llama a la recursión usando las variables de 'where'
+    where
+        -- Definiciones locales usando el bloque 'where'
+        (e', env') = smallStep e env
+
+varLookup :: String -> Env -> ASAValues
+varLookup var [] = error ("variable " ++ var ++ " no encontrada") 
+varLookup var ((var2, val):xs)
+    | var == var2 = val
+    | otherwise = varLookup var xs
 
 isValue :: ASAValues -> Bool
 isValue expr = case expr of
     NumV _ -> True
     BooleanV _ -> True
     NilV -> True
-    FunV _ _ -> True
+    -- FunV _ _ -> True
+    ClosureV _ _ _ -> True
     PairV v1 v2 -> isValue v1 && isValue v2
     -- Una lista es valor solo si TODOS sus elementos son valores
     ConsV v1 rest -> isValue v1 && isValue rest
     _ -> False
+
+interp :: ASAValues -> Env -> ASAValues
+interp e env
+    | isValue e = e  -- Caso base: Si ya es un valor, devuelve el valor
+    | otherwise =
+        -- Usa case para obtener el resultado de smallStep y ligarlo a e' y env'
+        case smallStep e env of
+            (e', env') -> interp e' env'
+            
+            -- La función de traza requiere que ASAValues y Env sean instancias de Show.
 
 

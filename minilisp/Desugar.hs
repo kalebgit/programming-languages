@@ -45,6 +45,7 @@ data ASAValues
     | TailV ASAValues
         --cosas con let
     | FunV String ASAValues
+    | ClosureV String ASAValues [(String, ASAValues)]    
     | AppV ASAValues ASAValues
     deriving (Show)
 
@@ -198,28 +199,112 @@ desugar (List (x:xs)) = ConsV (desugar x) (desugar (List xs))
 desugar (Head expr) = HeadV (desugar expr)
 desugar (Tail expr) = TailV (desugar expr)
 
+
 -- ==================
 -- funciones
 -- ==================
+desugar (LetStar bindings body) = desugarLetSec bindings body
+
 desugar (Let bindings body) = desugarLet bindings body
--- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
--- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
--- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
--- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
-    -- FALTA AGREGAR EL LET ESTRELLA PERO NO SE COMO IMPLEMENTARLO SI COMO AZUCAR SINTACTICA O COMO UN VALUE
--- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
--- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
--- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
--- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
+
+desugar (Lambda p c) = desugarLambda p (desugar c)
+
+desugar (App f p)  = desugarApp (desugar f) p -- este aun esta pendiente
 
 
--- Función auxiliar para desazucarar let
--- vamos leyendo e izquierda a derecha y creando una app de funcion por cada let
+
+--Funcion auxiliar para la lambda
+desugarLambda :: [String] -> ASAValues -> ASAValues
+desugarLambda [] c = c
+desugarLambda (x:xs) c = FunV x (desugarLambda xs c)
+
+desugarApp :: ASAValues -> [ASA] -> ASAValues
+desugarApp ac [] = ac
+desugarApp ac (x:xs) = desugarApp (AppV ac (desugar x)) xs
+
+
+desugarLetSec :: [(String, ASA)] -> ASA -> ASAValues
+-- Caso base: Si no hay variables a enlazar, desazucara el cuerpo.
+desugarLetSec [] body = desugar body
+-- Caso Recursivo (Múltiples Enlaces):
+-- Transforma: (let ((var expr) : rest) body) -> ((lambda var (desugarLet rest body)) (desugar expr))
+desugarLetSec ((var, expr):rest) body =
+    -- 1. Se construye el cuerpo interno recursivamente: (desugarLet rest body)
+    --    Esto resuelve los enlaces restantes de 'rest'.
+    AppV
+        -- 2. La función (f): (lambda var (desugarLet rest body))
+        (FunV var (desugarLetSec rest body))
+        -- 3. El argumento (p): (desugar expr)
+        (desugar expr)
+
+
+-- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
+   -- Abuse bastante de las herramientas de Haskkel, pero esto se puedo hacer sin estas funciones (luego lo checo)
+-- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========        
 desugarLet :: [(String, ASA)] -> ASA -> ASAValues
-desugarLet [] body = desugar body
-desugarLet [(var, expr)] body = 
-    -- (let ((x e)) body) -> ((lambda (x) body) e)
-    AppV (FunV var (desugar body)) (desugar expr)
-desugarLet ((var, expr):rest) body = 
-    -- Desazucarar recursivamente
-    AppV (FunV var (desugarLet rest body)) (desugar expr)
+desugarLet bindings body =
+    let 
+        -- 1. Separar las variables de las expresiones.
+        vars = map fst bindings
+        exprs = map snd bindings
+        
+        -- 2. Desazucarar el cuerpo.
+        desugaredBody = desugar body
+        
+        -- 3. Crear la función (lambda).
+        func = foldr FunV desugaredBody vars
+        
+        -- 4. Aplicar la función a las expresiones (AppV).
+    in desugarApp func exprs 
+
+
+
+-- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
+-- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
+-- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
+-- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
+    -- FALTA VER COMO SE VA A LOGRAR LA RECURSION ???, (Una opcion es crear un let recursivo)
+    -- Esto pues se pide calcular la suma de los primeros cien, etc
+    -- EN LA TAREA DEL PROYECTO ERICK DA COMO JIT : iNVESTIGAR HACERCA DE MYBE (monada mybe)
+-- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
+-- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
+-- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
+-- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
+
+
+{-
+
+-- Esto de conbinadores viene explicado en la tesis de Erick(es de utilidad para la recursion en lenguajes perezosos)
+
+-- Tipo de datos auxiliar para el Combinador Z (solo para claridad)
+zCombinator :: ASAValues
+zCombinator = FunV "f" (AppV (FunV "x" (AppV (AppV (IdV "f") (IdV "x")) (IdV "x"))) 
+                              (FunV "x" (AppV (AppV (IdV "f") (IdV "x")) (IdV "x"))))
+
+-- Función que genera la función de suma (con la llamada recursiva (s s))
+-- Asume que la función de suma original (val_f) se pasa como una lambda.
+makeSumGenerator :: ASAValues -> ASAValues
+makeSumGenerator sumLambdaBody = 
+    FunV "s" (FunV "n" (IfV (EqV (IdV "n") (NumV 0)) 
+                             (NumV 0) 
+                             (AddV (IdV "n") (AppV (AppV (IdV "s") (IdV "s")) (SubV (IdV "n") (NumV 1))))))
+
+-- Función de desazucarado para Letrecursivo (para una sola vinculación)
+desugarLetrec :: (String, ASA) -> ASA -> ASAValues
+desugarLetrec (var, expr) body = 
+    let
+        -- 1. Crear el generador G_f
+        -- Asumimos que 'expr' ya es la lambda con el cuerpo recursivo.
+        generator = makeSumGenerator (desugar expr) 
+        
+        -- 2. Calcular la función recursiva: (Z G_f)
+        recursedFunc = AppV zCombinator generator
+        
+        -- 3. Crear el cuerpo final de la desazucaración: ((lambda var body) recursedFunc)
+        -- Esto es la forma de let normal, pero con la función recursiva precalculada.
+    in
+        AppV
+            (FunV var (desugar body)) -- (lambda var cuerpo)
+            recursedFunc              -- Aplicado al valor de la función recursiva
+
+-}
