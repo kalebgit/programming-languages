@@ -13,6 +13,11 @@ saca (BooleanV b)
   | b == True = "#t"
   | otherwise = "#f"
 saca (ClosureV p c e) = "#<procedure>"
+saca (ConsV x xs) = "[" ++ daElem x xs ++ "]"
+
+daElem :: ASAValues -> ASAValues -> String
+daElem x NilV = saca x -- el caso base es cuando llegamos a NilV
+daElem c (ConsV x xs) = saca c ++ "," ++ daElem x xs -- caso recursivo, obtenemos la cabeza y buscamos en la cola
 
 -- La función repl ahora debe ejecutarse dentro del 'InputT IO'
 -- para manejar el estado de la línea de entrada (historial, navegación).

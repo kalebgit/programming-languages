@@ -74,7 +74,24 @@ smallStep (DivV expr1 expr2) env = case (expr1, expr2) of
         (i', env') -> (DivV i' d, env')
 -- =========================================================================================================================
 
+-- ============================= EXPONENTE =====================================================================================
+smallStep (ExpV expr1 expr2) env = case (expr1, expr2) of
+    (NumV n, NumV m) ->  (NumV (n^m), env) -- Ojo, con el ^ solo consideramos lo numeros enteros positivos
 
+    (NumV n, d) -> case smallStep d env of
+       (d', env') -> (ExpV (NumV n) d', env')
+
+    (i, d) -> case smallStep i env of
+       (i', env') -> (ExpV i' d, env')
+-- =========================================================================================================================
+
+-- ============================= RAIZ =====================================================================================
+smallStep (SqrV expr1) env = case  expr1 of
+    NumV n | n < 0 -> error ("No se puede obtener la raiz del numero " ++ show n) 
+           |otherwise -> (NumV (floor (sqrt (fromIntegral n))), env) 
+
+    n -> case smallStep n env of
+       (n', env') -> (SqrV n', env')
 
 
 

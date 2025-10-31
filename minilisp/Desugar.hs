@@ -13,6 +13,8 @@ data ASAValues
     | SubV ASAValues ASAValues
     | MultV ASAValues ASAValues
     | DivV ASAValues ASAValues
+    | ExpV ASAValues ASAValues
+    | SqrV ASAValues
         -- ==================
         -- logicos
         -- ==================
@@ -129,11 +131,9 @@ desugar (Sub1 exprs) = desugarUnary (\val -> SubV val (NumV 1)) exprs
 -- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
 -- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
 -- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
-desugar (Sqrt exprs) = desugarUnary (\val -> error "Sqrt no implementado aún en el núcleo") exprs
+desugar (Sqrt exprs) = desugarUnary (\val -> SqrV val) exprs
 
-desugar (Expt [base, exp]) = error "Expt no implementado aún"
--- TODO: Agregar ExptV a ASAValues
-desugar (Expt _) = error "Expt requiere exactamente 2 argumentos"
+desugar (Expt e exprs) = desugarUnary (\val -> ExpV val (desugar e)) exprs
 
 
 
@@ -272,7 +272,6 @@ desugarLet bindings body =
 -- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
 
 
-{-
 
 -- Esto de conbinadores viene explicado en la tesis de Erick(es de utilidad para la recursion en lenguajes perezosos)
 
@@ -281,30 +280,5 @@ zCombinator :: ASAValues
 zCombinator = FunV "f" (AppV (FunV "x" (AppV (AppV (IdV "f") (IdV "x")) (IdV "x"))) 
                               (FunV "x" (AppV (AppV (IdV "f") (IdV "x")) (IdV "x"))))
 
--- Función que genera la función de suma (con la llamada recursiva (s s))
--- Asume que la función de suma original (val_f) se pasa como una lambda.
-makeSumGenerator :: ASAValues -> ASAValues
-makeSumGenerator sumLambdaBody = 
-    FunV "s" (FunV "n" (IfV (EqV (IdV "n") (NumV 0)) 
-                             (NumV 0) 
-                             (AddV (IdV "n") (AppV (AppV (IdV "s") (IdV "s")) (SubV (IdV "n") (NumV 1))))))
-
--- Función de desazucarado para Letrecursivo (para una sola vinculación)
-desugarLetrec :: (String, ASA) -> ASA -> ASAValues
-desugarLetrec (var, expr) body = 
-    let
-        -- 1. Crear el generador G_f
-        -- Asumimos que 'expr' ya es la lambda con el cuerpo recursivo.
-        generator = makeSumGenerator (desugar expr) 
-        
-        -- 2. Calcular la función recursiva: (Z G_f)
-        recursedFunc = AppV zCombinator generator
-        
-        -- 3. Crear el cuerpo final de la desazucaración: ((lambda var body) recursedFunc)
-        -- Esto es la forma de let normal, pero con la función recursiva precalculada.
-    in
-        AppV
-            (FunV var (desugar body)) -- (lambda var cuerpo)
-            recursedFunc              -- Aplicado al valor de la función recursiva
-
--}
+-- Se asume el siguiente tipo:
+type Binding = (String, ASA)
