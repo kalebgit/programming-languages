@@ -74,6 +74,7 @@ tokens :-
     --agregamos los relacionados al let
     let                     {\_ -> TokenLet }
     let\*                   {\_ -> TokenLetStar }
+    letrec                     {\_ -> TokenLetRec }    
     
     -- agregamos los demas 
     cond                     {\_ -> TokenCond }
@@ -147,6 +148,7 @@ data Token
     -- relacionado con let
     | TokenLet
     | TokenLetStar
+    | TokenLetRec
     -- relacionadas con cond
     | TokenCond
     | TokenElse

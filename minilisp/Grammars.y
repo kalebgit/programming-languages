@@ -55,6 +55,7 @@ import Lex (Token(..), lexer)
     --cosas con let
     'let' { TokenLet }
     'let*' {TokenLetStar}
+    'letrec' {TokenLetRec}
    --cosas con cond
     "cond" { TokenCond }
     "else" {TokenElse}
@@ -93,7 +94,7 @@ ASA : int {Num $1} -- estas ya son
     | '(' 'add1' ASAExprs ')' {Add1 $3}
     | '(' 'sub1' ASAExprs ')' {Sub1 $3}
     | '(' 'sqrt' ASAExprs ')' {Sqrt $3}
-    | '(' 'expt' ASAExprs ')' {Expt $3}
+    | '(' 'expt' ASA ASAExprs ')' {Expt $3 $4}
     -- ==================
     -- pares ordenados 
     -- ==================
@@ -122,6 +123,7 @@ ASA : int {Num $1} -- estas ya son
     --queremos que acepte varias asignaciones
     | '(' 'let' '(' ASABindings ')' ASA ')' { Let $4 $6} 
     | '(' 'let*' '(' ASABindings ')' ASA ')' { LetStar $4 $6}
+    | '(' 'letrec' '(' ASABindings ')' ASA ')' { LetRec $4 $6}
     -- agregamos Cond
     | '(' "cond"  ASACond  "else" ASA  ')' { CondElse $3 $5}    
     -- agregamos lambda, app.
@@ -191,7 +193,7 @@ data ASA
     | Add1 [ASA]
     | Sub1 [ASA]
     | Sqrt [ASA]
-    | Expt [ASA]
+    | Expt ASA [ASA]
     -- ==================
     -- pares ordenados
     -- ==================
@@ -220,7 +222,8 @@ data ASA
 
     --cosas con let
     | Let [(String, ASA)] ASA 
-    | LetStar [(String, ASA)] ASA 
+    | LetStar [(String, ASA)] ASA
+    | LetRec [(String, ASA)] ASA  
     | Var String
     -- cond
     | CondElse [(ASA, ASA)] ASA  
