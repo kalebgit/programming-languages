@@ -114,6 +114,14 @@ smallStep (SqrV expr1) env = case  expr1 of
 
 -- ============================= IGUAL =====================================================================================
 smallStep (EqV expr1 expr2) env = case (expr1, expr2) of
+    (NilV, NilV) -> (BooleanV True, env)
+    (p, NilV) -> case smallStep p env of
+       (p', env') -> case isValue p' of
+         True -> case p' of
+           NilV -> (BooleanV True, env)
+           otro ->(BooleanV False, env)
+         False -> (EqV p' NilV, env')
+    
     (NumV n1, NumV n2) -> (BooleanV (n1 == n2), env)
     
     (NumV n, d) -> case smallStep d env of
@@ -292,6 +300,12 @@ smallStep (ConsV expr1 expr2) env = case expr2 of
         -- expr1 necesita evaluación, dar UN PASO
         False -> case smallStep expr1 env of
             (expr1', env') -> (ConsV expr1' expr2, env')
+            
+    p -> case smallStep p env of
+          (expr', env') -> (ConsV expr1 expr', env')
+
+-- ============================= NILV =====================================================================================
+
     
     --creo que ya no es necesario esta parte XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     -- -- expr2 no es NilV ni ConsV, debe evaluarse para verificar estructura
@@ -331,6 +345,12 @@ smallStep (TailV expr) env = case expr of
     ConsV v1 rest -> case isValue v1 of
         True -> case rest of
             NilV -> (NilV, env)
+            {-}
+            ConsV v NilV -> case isValue v of
+              True -> (ConsV v NilV, env)
+              False -> case smallStep v env of
+                (expr', env') -> (TailV expr', env')
+-}
             ConsV _ _ -> (rest, env)
             _ -> error "Lista mal formada: debe ser nil o cons"
         -- Primer elemento no es valor, evaluar la expresión
