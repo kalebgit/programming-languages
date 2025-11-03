@@ -1,2 +1,2 @@
-# programming-languages-languages
+# programming-languages
 uni tasks
