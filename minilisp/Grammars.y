@@ -11,7 +11,7 @@ import Lex (Token(..), lexer)
     --los transformamos 
     int { TokenNum $$ }
     bool { TokenBool $$ }
-
+    '++' { TokenConc}
     -- ==================
     -- aritmeticos
     -- ==================
@@ -71,11 +71,6 @@ import Lex (Token(..), lexer)
     'head' {TokenHead}
     'tail' {TokenTail}
 
---nucleo
-    'nil' {TokenNil}
-    'cons' {TokenCons}
-
-
     var  {TokenVar $$} -- obtenemos el nombre de la variable (i.e. que ya es String?)
 
 
@@ -125,6 +120,7 @@ ASA : int {Num $1} -- estas ya son
     | '(' 'let*' '(' ASABindings ')' ASA ')' { LetStar $4 $6}
     | '(' 'letrec' '(' ASABindings ')' ASA ')' { LetRec $4 $6}
     -- agregamos Cond
+    --| '(' "cond"  ASACond '[' "else" ASA ']' ')' { CondElse $3 $6}
     | '(' "cond"  ASACond  "else" ASA  ')' { CondElse $3 $5}    
     -- agregamos lambda, app.
     | '(' "lambda" '(' ListVar ')'  ASA ')' { Lambda $4 $6 }			  
@@ -134,6 +130,7 @@ ASA : int {Num $1} -- estas ya son
     -- listas
     -- estas ya son propias del lenguaje 
     -- ==================
+    | '(' '++' ASA ASA ')' { Conc $3 $4 }
     | '(' 'head' ASA ')' { Head $3 }
     | '(' 'tail' ASA ')' { Tail $3 }
 
@@ -159,9 +156,7 @@ ASABindings : {- empty -} { [] }
 ASAC : '[' ASA ASA ']' { ($2, $3) }
     
 ASACond : ASAC { [$1] }
-    |  ASAC ASACond { $1 : $2} -- 
-
-
+    |  ASAC ASACond { $1 : $2}
 
     -- argumento para lambda
 ListVar: var ListVar  { $1 : $2}
@@ -234,6 +229,7 @@ data ASA
     -- ==================
     -- listas
     -- ==================
+    | Conc ASA ASA
     | List [ASA]
     | Tail ASA
     | Head ASA

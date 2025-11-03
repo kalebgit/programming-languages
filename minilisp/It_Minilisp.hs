@@ -13,6 +13,7 @@ saca (BooleanV b)
   | b == True = "#t"
   | otherwise = "#f"
 saca (ClosureV p c e) = "#<procedure>"
+saca NilV = "[]"
 saca (ConsV x xs) = "[" ++ daElem x xs ++ "]"
 
 daElem :: ASAValues -> ASAValues -> String

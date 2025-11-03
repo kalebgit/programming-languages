@@ -21,6 +21,7 @@ tokens :-
     -- Regex de numeros
     -- ==================
     \-?$digit+             {\s -> TokenNum (read s) } -- Soporta numeros negativos(por eso de define antes que el \-)
+    "++"                   {\_ -> TokenConc} -- Se usará para agregar un elemento a una lista      
 
     -- ==================
     -- aritmeticos
@@ -88,7 +89,7 @@ tokens :-
     cons                    {\_ -> TokenCons}
 
     --regex del var
-    [a-zA-Z][a-zA-Z0-9]*    {\s -> TokenVar s}
+    [a-zA-Z][a-zA-Z0-9_]*    {\s -> TokenVar s}
 
     
 
@@ -158,6 +159,7 @@ data Token
     -- ==================
     -- listas 
     -- ==================
+    | TokenConc
     | TokenComma
     | TokenCA
     | TokenCC

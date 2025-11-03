@@ -103,9 +103,11 @@ desugar (Add exprs) = case desugarBinary AddV exprs of
     Just result -> result
     Nothing -> error "Add requiere al menos 2 argumentos"
 
-desugar (Sub exprs) = case desugarBinary SubV exprs of
-    Just result -> result
-    Nothing -> error "Sub requiere al menos 2 argumentos"
+desugar (Sub exprs) = case exprs of
+    [x] ->  desugar (Mult [(Num (-1)),x])  
+    other -> case desugarBinary SubV exprs of
+      Just result -> result
+      Nothing -> error "Sub requiere al menos 2 argumentos"
 
 desugar (Mult exprs) = case desugarBinary MultV exprs of
     Just result -> result
@@ -118,9 +120,13 @@ desugar (Div exprs) = case desugarBinary DivV exprs of
 
 --TODO: verificar que funciona correctamente es decir que la funcion lambad anonima se llame en cada elemento de la lista
 -- add1 y sub1: operaciones "unarias" que se aplican elemento por elemento
-desugar (Add1 exprs) = desugarUnary (\val -> AddV val (NumV 1)) exprs
+desugar (Add1 exprs) = case exprs of
+  [x] -> AddV (desugar x) (NumV 1)
+  other -> desugarUnary (\val -> AddV val (NumV 1)) exprs
 
-desugar (Sub1 exprs) = desugarUnary (\val -> SubV val (NumV 1)) exprs
+desugar (Sub1 exprs) = case exprs of
+  [x] -> SubV (desugar x) (NumV 1)
+  other -> desugarUnary (\val -> SubV val (NumV 1)) exprs
 
 -- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
 -- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
@@ -131,9 +137,15 @@ desugar (Sub1 exprs) = desugarUnary (\val -> SubV val (NumV 1)) exprs
 -- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
 -- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
 -- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
-desugar (Sqrt exprs) = desugarUnary (\val -> SqrV val) exprs
+desugar (Sqrt exprs) = case exprs of
+  [] -> error "no se dan argumnetos"
+  [x] -> SqrV (desugar x)
+  other -> desugarUnary (\val -> SqrV val) exprs
 
-desugar (Expt e exprs) = desugarUnary (\val -> ExpV val (desugar e)) exprs
+desugar (Expt e exprs) = case exprs of
+  [] -> error "faltan argumentos"  
+  [x] -> ExpV (desugar e) (desugar x)
+  other -> desugarUnary (\val -> ExpV val (desugar e)) exprs
 
 
 
@@ -193,7 +205,7 @@ desugar (Snd expr) = SndV (desugar expr)
 -- ==================
 desugar (List []) = NilV
 desugar (List (x:xs)) = ConsV (desugar x) (desugar (List xs))
-
+desugar (Conc e l) = ConsV (desugar e) (desugar l)
 
 -- Núcleo de listas
 desugar (Head expr) = HeadV (desugar expr)
@@ -203,13 +215,22 @@ desugar (Tail expr) = TailV (desugar expr)
 -- ==================
 -- funciones
 -- ==================
+desugar (CondElse p c) = case p of
+  [(x,y)] -> desugar (If x y c)
+  x:xs -> case x of
+    (a,b) -> desugar (If a b (CondElse xs c))
+
 desugar (LetStar bindings body) = desugarLetSec bindings body
 
 desugar (Let bindings body) = desugarLet bindings body
 
+desugar (LetRec bindings body) = desugarLetRec bindings body
+
 desugar (Lambda p c) = desugarLambda p (desugar c)
 
-desugar (App f p)  = desugarApp (desugar f) p -- este aun esta pendiente
+desugar (App f p)  = case p of
+  [] -> error "se necesita almnos un argumento"
+  other -> desugarApp (desugar f) p -- este aun esta pendiente
 
 
 
@@ -240,24 +261,13 @@ desugarLetSec ((var, expr):rest) body =
 
 -- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
    -- Abuse bastante de las herramientas de Haskkel, pero esto se puedo hacer sin estas funciones (luego lo checo)
--- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========        
+-- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
+
 desugarLet :: [(String, ASA)] -> ASA -> ASAValues
 desugarLet bindings body =
-    let 
         -- 1. Separar las variables de las expresiones.
-        vars = map fst bindings
-        exprs = map snd bindings
+      desugar (App (Lambda (map fst bindings) body) (map snd bindings) )
         
-        -- 2. Desazucarar el cuerpo.
-        desugaredBody = desugar body
-        
-        -- 3. Crear la función (lambda).
-        func = foldr FunV desugaredBody vars
-        
-        -- 4. Aplicar la función a las expresiones (AppV).
-    in desugarApp func exprs 
-
-
 
 -- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
 -- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
@@ -270,15 +280,34 @@ desugarLet bindings body =
 -- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
 -- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
 -- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
+-- La clave es esta desazucaración:
+-- (letrec ((var val)) body)  ->  (let ((var (App zCombinador [Lambda [var] val]))) body)
 
-
+desugarLetRec :: [(String, ASA)] -> ASA -> ASAValues
+desugarLetRec [(var,val)] body = desugar (Let [(var,(App zCombinador [Lambda [var] val]) )] body)
+--desugarLetRec [(var,val)] body = desugar (Let ( (var (App zCombinador (Lambda (var) val)) )) body)
+desugarLetRec _ _ = error "aun no implementado"
 
 -- Esto de conbinadores viene explicado en la tesis de Erick(es de utilidad para la recursion en lenguajes perezosos)
 
 -- Tipo de datos auxiliar para el Combinador Z (solo para claridad)
-zCombinator :: ASAValues
-zCombinator = FunV "f" (AppV (FunV "x" (AppV (AppV (IdV "f") (IdV "x")) (IdV "x"))) 
-                              (FunV "x" (AppV (AppV (IdV "f") (IdV "x")) (IdV "x"))))
 
--- Se asume el siguiente tipo:
-type Binding = (String, ASA)
+-- Termino interno: (lambda x (App (Var "f") (Lambda ["v"] (App (App (Var "x") [Var "x"]) [Var "v"]))))
+internalTerm :: ASA
+internalTerm = Lambda ["x"] $ App (Var "f") [
+    -- Retraso o "Thunk": (lambda v (App (App (Var "x") [Var "x"]) [Var "v"]))
+    Lambda ["v"] $ App (App (Var "x") [Var "x"]) [Var "v"]
+    ]
+
+-- NOTA sobre App: Asumo que `App f [a, b]` se representa como `(f a b)`
+-- Tu gramática tiene: | '(' ASA ASAExprs ')' { App $2 $3}
+-- Donde $2 es la función y $3 es la lista de argumentos ASAExprs.
+-- Por lo tanto, (x x) se traduce a (App (Var "x") [Var "x"]).
+-- Y (x x v) se traduce a (App (App (Var "x") [Var "x"]) [Var "v"])
+
+zCombinador :: ASA
+zCombinador = Lambda ["f"] $ App internalTerm [internalTerm]
+
+-- Donde internalTerm está definido arriba.
+-- O, si lo pones en una sola línea:
+-- zCombinador = Lambda ["f"] $ App (Lambda ["x"] $ App (Var "f") [Lambda ["v"] $ App (App (Var "x") [Var "x"]) [Var "v"]]) [Lambda ["x"] $ App (Var "f") [Lambda ["v"] $ App (App (Var "x") [Var "x"]) [Var "v"]]]
