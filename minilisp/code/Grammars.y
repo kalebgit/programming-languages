@@ -120,8 +120,9 @@ ASA : int {Num $1} -- estas ya son
     | '(' 'let*' '(' ASABindings ')' ASA ')' { LetStar $4 $6}
     | '(' 'letrec' '(' ASABindings ')' ASA ')' { LetRec $4 $6}
     -- agregamos Cond
-    --| '(' "cond"  ASACond '[' "else" ASA ']' ')' { CondElse $3 $6}
     | '(' "cond"  ASACond  "else" ASA  ')' { CondElse $3 $5}    
+
+
     -- agregamos lambda, app.
     | '(' "lambda" '(' ListVar ')'  ASA ')' { Lambda $4 $6 }			  
     | '(' ASA  ASAExprs ')' { App $2 $3} 
@@ -161,6 +162,8 @@ ASACond : ASAC { [$1] }
     -- argumento para lambda
 ListVar: var ListVar  { $1 : $2}
     | var       {[$1]}
+
+
 
 
 

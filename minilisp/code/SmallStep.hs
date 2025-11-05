@@ -391,18 +391,6 @@ varLookup var ((var2, val):xs)
     | var == var2 = val
     | otherwise = varLookup var xs
 
--- isValue :: ASAValues -> Bool
--- isValue expr = case expr of
---     NumV _ -> True
---     BooleanV _ -> True
---     NilV -> True
---     -- FunV _ _ -> True
---     ClosureV _ _ _ -> True
---     PairV v1 v2 -> isValue v1 && isValue v2
---     -- Una lista es valor solo si TODOS sus elementos son valores
---     ConsV v1 rest -> isValue v1 && isValue rest
---     _ -> False
-
 
 isValue :: ASAValues -> Bool
 isValue expr = case expr of

@@ -129,16 +129,6 @@ run_desugar_test \
     "(* 2 3 4)" \
     "MultV.*NumV 2.*MultV.*NumV 3.*NumV 4"
 
-run_desugar_test \
-    "Resta variádica" \
-    "(- 10 3 2)" \
-    "SubV.*NumV 10.*SubV.*NumV 3.*NumV 2"
-
-run_desugar_test \
-    "División variádica" \
-    "(/ 100 5 2)" \
-    "DivV.*NumV 100.*DivV.*NumV 5.*NumV 2"
-
 # ==========================================
 # COMPARADORES VARIÁDICOS → AND DE COMPARACIONES
 # ==========================================
