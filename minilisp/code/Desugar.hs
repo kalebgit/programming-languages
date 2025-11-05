@@ -64,6 +64,16 @@ desugarBinary op (x:xs) = case desugarBinary op xs of
 
 
 
+--algunas operaciones queremos asociarlas a la izquierda, entonces: 
+-- Desazucariza operaciones binarias con asociatividad a la izquierda
+-- Ej: (op a b c) → ((a op b) op c)
+desugarBinaryLeft :: (ASAValues -> ASAValues -> ASAValues) -> [ASA] -> ASAValues
+desugarBinaryLeft _ []  = error "Operación binaria requiere al menos 2 argumentos"
+desugarBinaryLeft _ [_] = error "Operación binaria requiere al menos 2 argumentos"
+desugarBinaryLeft op (x:xs) = foldl (\acc e -> op acc (desugar e)) (desugar x) xs
+
+
+
 desugarBinaryCompare :: (ASAValues -> ASAValues -> ASAValues) -> [ASA] -> ASAValues
 desugarBinaryCompare _ [] = error "Comparador requiere al menos 2 argumentos" -- como necesitamos al menos dos argumentso devolvemos nada (TODO: no se si esta bien implementado esto)
 desugarBinaryCompare _ [_] = error "Comparador requiere al menos 2 argumentos"
@@ -100,19 +110,33 @@ desugar (Add exprs) = case desugarBinary AddV exprs of
     Just result -> result
     Nothing -> error "Add requiere al menos 2 argumentos"
 
+
+
+
 desugar (Sub exprs) = case exprs of
-    [x] ->  desugar (Mult [(Num (-1)),x])   -- este caso es especial ya que los podemos desazucarizar
-    other -> case desugarBinary SubV exprs of
-      Just result -> result
-      Nothing -> error "Sub requiere al menos 2 argumentos"
+    [x] -> desugar (Mult [Num (-1), x])  -- unary minus
+    _   -> desugarBinaryLeft SubV exprs
+
+
+
+
+
 
 desugar (Mult exprs) = case desugarBinary MultV exprs of
     Just result -> result
     Nothing -> error "Mult requiere al menos 2 argumentos"
 
-desugar (Div exprs) = case desugarBinary DivV exprs of
-    Just result -> result
-    Nothing -> error "Div requiere al menos 2 argumentos"
+
+
+
+
+desugar (Div exprs) = desugarBinaryLeft DivV exprs
+
+
+
+
+
+
 
 
 -- add1 y sub1: operaciones "unarias" que se aplican elemento por elemento
