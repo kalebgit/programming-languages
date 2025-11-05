@@ -84,10 +84,7 @@ desugarBinaryCompare op (expr1:expr2:expr3:rest) =
 -- Vemos que en la defincion del primer argumetno de la funcion es de tipo unaria
 desugarUnary :: (ASAValues -> ASAValues) -> [ASA] -> ASAValues
 desugarUnary _ [] = NilV
---NOTA SOBRE HASKELL: al especificar llamadas de funcion por default se agregan los parentesis alrededor del resultado de esa llamada a fucnion
--- como con desugar x se le preservaran los parentesis op (resultado_desugar)
 desugarUnary op (x:xs) = ConsV (op (desugar x)) (desugarUnary op xs) -- le ponemos parentesis pues en el core las listas son ConsV a1 (ConV a2 (NilV))
--- desugarUnary _ _ = Nothing  -- creo que no es necesario porque grammars siempre crea un arreglo
 
 
 
@@ -118,7 +115,6 @@ desugar (Div exprs) = case desugarBinary DivV exprs of
     Nothing -> error "Div requiere al menos 2 argumentos"
 
 
---TODO: verificar que funciona correctamente es decir que la funcion lambad anonima se llame en cada elemento de la lista
 -- add1 y sub1: operaciones "unarias" que se aplican elemento por elemento
 desugar (Add1 exprs) = case exprs of
   [x] -> AddV (desugar x) (NumV 1)                          -- notese que acá se toma en cuenta este caso pues se piensa que cuando solo
@@ -131,11 +127,6 @@ desugar (Sub1 exprs) = case exprs of      -- notese que  acá no checamos el cas
   other -> desugarUnary (\val -> SubV val (NumV 1)) exprs
 
   
--- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
--- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
-    -- AGREGAR EXPT Y SQRT A LOS ASAS
--- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
--- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
 
 desugar (Sqrt exprs) = case exprs of
   [] -> error "no se dan argumnetos" -- el desugarUnary no maneja los casos cuando se le pasa algun argumento vacío
@@ -253,9 +244,6 @@ desugarLetSec ((var, expr):rest) body =
         (desugar expr)
 
 
--- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
-   -- Abuse bastante de las herramientas de Haskkel, pero esto es muy legible
--- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
 
 desugarLet :: [(String, ASA)] -> ASA -> ASAValues
 desugarLet bindings body =
@@ -263,11 +251,6 @@ desugarLet bindings body =
       desugar (App (Lambda (map fst bindings) body) (map snd bindings) )
         
 
--- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
--- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
-    -- FALTA VER COMO SE VA A LOGRAR LA RECURSION ???, así que creamos un letrec, pero no tiene soporte varidico.
--- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
--- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
 
 -- La clave es esta desazucaración:
 -- (letrec ((var val)) body)  ->  (let ((var (App zCombinador [Lambda [var] val]))) body)
