@@ -75,7 +75,7 @@ show_main_menu() {
     echo -e "${GREEN}1.${NC} Ejecutar Pruebas Completas del Sistema"
     echo -e "${GREEN}2.${NC} Ejecutar Pruebas Especiales (map, filter, factorial, etc.)"
     echo -e "${GREEN}3.${NC} Ejecutar Pruebas por Módulo Individual"
-    echo -e "${GREEN}4.${NC} Modo Interactivo (REPL)"
+    echo -e "${GREEN}4.${NC} (no disponible)"
     echo -e "${GREEN}5.${NC} Recompilar Proyecto"
     echo -e "${GREEN}6.${NC} Salir"
     echo -e "${BLUE}══════════════════════════════════════════════════════${NC}"
