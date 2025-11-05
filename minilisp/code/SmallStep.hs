@@ -256,6 +256,13 @@ smallStep (SndV pair) env = case pair of
     -- NOTA IMPORTANTE: en una lista con cons vamos reduciendo los valores de izquierda a derecha
 -- Cons evalúa solo el primer elemento si no es valor
 -- NO reduce recursivamente, solo un paso a la vez
+
+
+
+smallStep (ConsV NilV rest) env = (rest, env)
+
+
+
 smallStep (ConsV expr1 expr2) env = case expr2 of
     -- Verificar que expr2 sea NilV o ConsV (estructura de lista válida)
     NilV -> case isValue expr1 of
@@ -384,6 +391,19 @@ varLookup var ((var2, val):xs)
     | var == var2 = val
     | otherwise = varLookup var xs
 
+-- isValue :: ASAValues -> Bool
+-- isValue expr = case expr of
+--     NumV _ -> True
+--     BooleanV _ -> True
+--     NilV -> True
+--     -- FunV _ _ -> True
+--     ClosureV _ _ _ -> True
+--     PairV v1 v2 -> isValue v1 && isValue v2
+--     -- Una lista es valor solo si TODOS sus elementos son valores
+--     ConsV v1 rest -> isValue v1 && isValue rest
+--     _ -> False
+
+
 isValue :: ASAValues -> Bool
 isValue expr = case expr of
     NumV _ -> True
@@ -392,7 +412,9 @@ isValue expr = case expr of
     -- FunV _ _ -> True
     ClosureV _ _ _ -> True
     PairV v1 v2 -> isValue v1 && isValue v2
-    -- Una lista es valor solo si TODOS sus elementos son valores
+    -- Nueva regla: listas que comienzan con NilV NO son valores (para reducirlas)
+    ConsV NilV _ -> False
+    -- Regla original: Una lista es valor solo si TODOS sus elementos son valores
     ConsV v1 rest -> isValue v1 && isValue rest
     _ -> False
 

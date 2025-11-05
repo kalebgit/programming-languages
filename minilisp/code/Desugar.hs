@@ -215,7 +215,11 @@ desugar (Snd expr) = SndV (desugar expr)
 -- ==================
 desugar (List []) = NilV
 desugar (List (x:xs)) = ConsV (desugar x) (desugar (List xs))
-desugar (Conc e l) = ConsV (desugar e) (desugar l)
+
+
+desugar (Conc e l) = desugarConc e l
+
+
 -- Núcleo de listas
 desugar (Head expr) = HeadV (desugar expr)
 desugar (Tail expr) = TailV (desugar expr)
@@ -279,9 +283,23 @@ desugarLet bindings body =
 -- La clave es esta desazucaración:
 -- (letrec ((var val)) body)  ->  (let ((var (App zCombinador [Lambda [var] val]))) body)
 
+-- desugarLetRec :: [(String, ASA)] -> ASA -> ASAValues
+-- desugarLetRec [(var,val)] body = desugar (Let [(var,(App zCombinador [Lambda [var] val]) )] body)
+-- desugarLetRec _ _ = error "aun no implementado"
+
 desugarLetRec :: [(String, ASA)] -> ASA -> ASAValues
-desugarLetRec [(var,val)] body = desugar (Let [(var,(App zCombinador [Lambda [var] val]) )] body)
-desugarLetRec _ _ = error "aun no implementado"
+desugarLetRec bindings body =
+    desugar (Let (map (\(var, val) -> (var, App zCombinador [Lambda [var] val])) bindings) body) 
+
+
+
+-- correccion de listas
+desugarConc :: ASA -> ASA -> ASAValues
+desugarConc e l = case (desugar e, desugar l) of
+    (NilV, list) -> list
+    (elem, NilV) -> ConsV elem NilV
+    (elem, list) -> ConsV elem list
+
 
 
 -- ========== ========== ========== ========== ========== ========== ========== ========== ========== ========== ==========
@@ -294,6 +312,9 @@ internalTerm :: ASA
 internalTerm = Lambda ["x"] $ App (Var "f") [ Lambda ["v"] $ App (App (Var "x") [Var "x"]) [Var "v"] ]
 
 -- Y (x x v) se traduce a (App (App (Var "x") [Var "x"]) [Var "v"])
+
+
+
 
 zCombinador :: ASA
 zCombinador = Lambda ["f"] $ App internalTerm [internalTerm]
