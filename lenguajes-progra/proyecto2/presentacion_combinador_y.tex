@@ -1,0 +1,630 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+% Configuración de colores para código
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{haskellstyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2
+}
+
+\lstset{style=haskellstyle}
+
+\title{Combinador Y: Recursión sin Auto-Referencia\\
+\large Diálogo para Presentación}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section*{Guión de Presentación}
+
+\subsection*{Introducción (Plantear la pregunta)}
+
+\begin{quote}
+\textbf{Presentador:} ``Hoy vamos a responder una pregunta que puede parecer obvia al principio: ¿Cuál es la diferencia entre un intérprete normal y uno que usa el combinador Y?''
+
+\textbf{Presentador:} ``A simple vista, ambos interpretan expresiones aritméticas de la misma forma. Veamos un ejemplo...''
+\end{quote}
+
+\subsection*{Demostración 1: Mismo comportamiento}
+
+\begin{quote}
+\textbf{Presentador:} ``Evaluemos la expresión \texttt{(+ (* 3 4) 5)} con ambos enfoques:''
+\end{quote}
+
+\begin{verbatim}
+Evaluando: (+ (* 3 4) 5)
+Con recursión tradicional: 17
+Con combinador Y:          17
+
+Resultado: ¡Son iguales!
+\end{verbatim}
+
+\begin{quote}
+\textbf{Presentador:} ``Como vemos, el \textit{comportamiento} es idéntico. Pero entonces, ¿dónde está la diferencia?''
+
+\textbf{Presentador:} ``La diferencia está en \textit{cómo implementamos la recursión}. Veamos el código...''
+\end{quote}
+
+\subsection*{Demostración 2: Código lado a lado}
+
+\begin{quote}
+\textbf{Presentador:} ``Primero, el enfoque tradicional:''
+\end{quote}
+
+\begin{lstlisting}[language=Haskell, caption=Recursión Tradicional]
+evalTradicional :: ASAValues -> Int
+evalTradicional expr = case expr of
+    NumV n -> n
+
+    -- La función SE LLAMA A SÍ MISMA por nombre
+    AddV e1 e2 -> evalTradicional e1 + evalTradicional e2
+    --            ^^^^^^^^^^^^^^^ auto-referencia explicita
+
+    SubV e1 e2 -> evalTradicional e1 - evalTradicional e2
+    MultV e1 e2 -> evalTradicional e1 * evalTradicional e2
+    DivV e1 e2 -> evalTradicional e1 `div` evalTradicional e2
+\end{lstlisting}
+
+\begin{quote}
+\textbf{Presentador:} ``Noten cómo \texttt{evalTradicional} se llama a sí misma directamente por nombre. Esto es recursión explícita.''
+
+\textbf{Presentador:} ``Ahora veamos el enfoque con combinador Y:''
+\end{quote}
+
+\begin{lstlisting}[language=Haskell, caption=Con Combinador Y]
+evalMaker :: (ASAValues -> Int) -> (ASAValues -> Int)
+evalMaker evalRec expr = case expr of
+    NumV n -> n
+
+    -- NO se llama a si misma, usa el parametro 'evalRec'
+    AddV e1 e2 -> evalRec e1 + evalRec e2
+    --            ^^^^^^^ NO es auto-referencia, es un parametro
+
+    SubV e1 e2 -> evalRec e1 - evalRec e2
+    MultV e1 e2 -> evalRec e1 * evalRec e2
+    DivV e1 e2 -> evalRec e1 `div` evalRec e2
+
+-- El combinador Y "inyecta" la recursion
+evalExpr :: ASAValues -> Int
+evalExpr = yFix evalMaker
+\end{lstlisting}
+
+\begin{quote}
+\textbf{Presentador:} ``¡Aquí está la diferencia clave! \texttt{evalMaker} \textbf{NUNCA} se llama a sí misma por nombre. En lugar de eso, recibe la recursión como un parámetro \texttt{evalRec}.''
+
+\textbf{Presentador:} ``El combinador Y es quien 'inyecta' la recursión desde afuera.''
+\end{quote}
+
+\newpage
+\subsection*{Explicación Técnica: ¿Cómo funciona?}
+
+\begin{quote}
+\textbf{Presentador:} ``Veamos paso a paso cómo el combinador Y hace esta 'magia'.''
+\end{quote}
+
+\subsubsection*{Definición del Combinador Y}
+
+\begin{lstlisting}[language=Haskell]
+yFix :: ((a -> b) -> (a -> b)) -> (a -> b)
+yFix f = f (yFix f)
+\end{lstlisting}
+
+\begin{quote}
+\textbf{Presentador:} ``Esta definición tan simple tiene una propiedad poderosa: encuentra el punto fijo de una función.''
+\end{quote}
+
+\subsubsection*{Propiedad de Punto Fijo}
+
+\begin{quote}
+\textbf{Presentador:} ``Un punto fijo de una función $f$ es un valor $x$ tal que $f(x) = x$.''
+
+\textbf{Presentador:} ``Para nuestro caso:''
+\end{quote}
+
+\begin{equation*}
+\texttt{evalExpr} = \texttt{yFix evalMaker} = \texttt{evalMaker evalExpr}
+\end{equation*}
+
+\begin{quote}
+\textbf{Presentador:} ``Es decir, \texttt{evalExpr} es el punto fijo de \texttt{evalMaker}.''
+\end{quote}
+
+\subsubsection*{Expansión Paso a Paso}
+
+\begin{quote}
+\textbf{Presentador:} ``Veamos cómo se expande la evaluación de \texttt{(+ 2 3)}:''
+\end{quote}
+
+\begin{align*}
+&\texttt{evalExpr (AddV (NumV 2) (NumV 3))} \\
+&= \texttt{(yFix evalMaker) (AddV (NumV 2) (NumV 3))} \\
+&= \texttt{(evalMaker (yFix evalMaker)) (AddV (NumV 2) (NumV 3))} \quad \text{(def. de yFix)} \\
+&= \texttt{(evalMaker evalExpr) (AddV (NumV 2) (NumV 3))} \quad \text{(punto fijo)} \\
+&= \texttt{evalExpr (NumV 2) + evalExpr (NumV 3)} \quad \text{(expansión de evalMaker)} \\
+&= \texttt{2 + 3} \\
+&= \texttt{5}
+\end{align*}
+
+\begin{quote}
+\textbf{Presentador:} ``¡La recursión funciona sin que \texttt{evalMaker} se llame a sí misma!''
+\end{quote}
+
+\newpage
+\subsection*{Ejemplo con Factorial}
+
+\begin{quote}
+\textbf{Presentador:} ``Para entenderlo mejor, veamos un ejemplo más familiar: el factorial.''
+\end{quote}
+
+\begin{verbatim}
+=== COMPARACIÓN: Factorial Tradicional vs Con Y ===
+factorialTradicional 5 = 120
+factorial (con Y)      5 = 120
+\end{verbatim}
+
+\begin{lstlisting}[language=Haskell, caption=Factorial Tradicional]
+factorialTradicional :: Int -> Int
+factorialTradicional n
+    | n <= 0    = 1
+    | otherwise = n * factorialTradicional (n - 1)
+                      -- ^^^^^^^^^^^^^^^^^^^^ auto-referencia
+\end{lstlisting}
+
+\begin{lstlisting}[language=Haskell, caption=Factorial con Y]
+factorialMaker :: (Int -> Int) -> (Int -> Int)
+factorialMaker rec n
+    | n <= 0    = 1
+    | otherwise = n * rec (n - 1)
+                      -- ^^^ parametro, no auto-referencia
+
+factorial :: Int -> Int
+factorial = yFix factorialMaker
+\end{lstlisting}
+
+\subsection*{Diferencias Resumidas}
+
+\begin{quote}
+\textbf{Presentador:} ``Resumamos las diferencias clave:''
+\end{quote}
+
+\begin{enumerate}
+\item \textbf{Recursión Tradicional:}
+    \begin{itemize}
+    \item La función se llama a sí misma por nombre
+    \item Requiere que el lenguaje soporte recursión explícita
+    \item Es lo que normalmente escribimos
+    \end{itemize}
+
+\item \textbf{Combinador Y:}
+    \begin{itemize}
+    \item La función \textit{nunca} se refiere a sí misma
+    \item La recursión viene ``desde afuera'' vía el combinador Y
+    \item Demuestra que la recursión puede implementarse sin auto-referencia
+    \end{itemize}
+\end{enumerate}
+
+\newpage
+\subsection*{Importancia Teórica}
+
+\begin{quote}
+\textbf{Presentador:} ``Pero, ¿por qué es importante esto?''
+\end{quote}
+
+\subsubsection*{1. Base del Cálculo Lambda}
+
+\begin{quote}
+\textbf{Presentador:} ``El Cálculo Lambda puro \textbf{no tiene recursión explícita}. No puedes nombrar funciones para llamarlas recursivamente.''
+
+\textbf{Presentador:} ``El combinador Y demuestra que \textit{no necesitas} recursión como primitiva del lenguaje. Puedes implementarla usando solo:''
+\end{quote}
+
+\begin{itemize}
+\item Funciones
+\item Aplicación de funciones
+\item Funciones de orden superior
+\end{itemize}
+
+\subsubsection*{2. Recursión sin Auto-Referencia}
+
+\begin{quote}
+\textbf{Presentador:} ``Imagina que te prohíben usar el nombre de una función dentro de su propio cuerpo. ¿Cómo harías recursión?''
+
+\textbf{Presentador:} ``El combinador Y es la respuesta: inyecta la recursión desde afuera.''
+\end{quote}
+
+\subsubsection*{3. Aplicaciones Prácticas}
+
+\begin{itemize}
+\item \textbf{Lenguajes funcionales:} Base teórica para implementar recursión
+\item \textbf{Teoría de tipos:} Entender recursión en sistemas de tipos
+\item \textbf{Optimización:} Algunos compiladores usan puntos fijos para optimizar
+\item \textbf{Semántica:} Definir semántica de lenguajes con recursión
+\end{itemize}
+
+\subsection*{Conclusión}
+
+\begin{quote}
+\textbf{Presentador:} ``Entonces, ¿cuál es la diferencia entre un intérprete normal y uno con combinador Y?''
+
+\textbf{Presentador:} ``El \textit{comportamiento} es idéntico, pero la \textit{implementación} es radicalmente diferente:''
+\end{quote}
+
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Aspecto} & \textbf{Diferencia} \\
+\hline
+Comportamiento & Idéntico \\
+Auto-referencia & Tradicional: Sí, Combinador Y: No \\
+Recursión & Tradicional: Explícita, Combinador Y: Inyectada \\
+Requisito del lenguaje & Tradicional: Recursión nativa, Combinador Y: Solo HOF \\
+Importancia & Tradicional: Práctica, Combinador Y: Teórica y práctica \\
+\hline
+\end{tabular}
+\end{center}
+
+\begin{quote}
+\textbf{Presentador:} ``El combinador Y demuestra un resultado profundo: \textbf{la recursión no es una primitiva necesaria}, sino que puede ser \textit{derivada} de funciones de orden superior.''
+
+\textbf{Presentador:} ``Esta es la base teórica del Cálculo Lambda y de lenguajes funcionales modernos.''
+\end{quote}
+
+\newpage
+\section*{Autointerpretación y Metaprogramación con el Combinador Y}
+
+\subsection*{La Conexión Clave}
+
+\begin{quote}
+\textbf{Presentador:} ``Ahora llegamos a la parte más interesante: ¿Cómo el combinador Y permite la autointerpretación y la metaprogramación?''
+
+\textbf{Presentador:} ``La respuesta está en que el combinador Y permite que un intérprete \textit{se pase a sí mismo como argumento}.''
+\end{quote}
+
+\subsubsection*{¿Qué es la Autointerpretación?}
+
+\begin{quote}
+\textbf{Presentador:} ``Un autointérprete es un programa que puede interpretar su propio lenguaje. Es decir:''
+\end{quote}
+
+\begin{itemize}
+\item El intérprete está escrito en el lenguaje $L$
+\item Interpreta programas también escritos en $L$
+\item $L_{\text{anfitrión}} = L_{\text{objeto}}$
+\end{itemize}
+
+\begin{quote}
+\textbf{Presentador:} ``Sin el combinador Y, esto es \textbf{imposible} en cálculo lambda puro, porque no podríamos expresar la recursión necesaria para que el intérprete se llame a sí mismo.''
+\end{quote}
+
+\subsubsection*{Implementación: Autointérprete Básico}
+
+\begin{quote}
+\textbf{Presentador:} ``Veamos cómo se implementa un autointérprete usando el combinador Y:''
+\end{quote}
+
+\begin{lstlisting}[language=Haskell, caption=Autointérprete con Combinador Y]
+-- Tipo de datos para representar expresiones del lenguaje
+data ASAValues
+    = NumV Int
+    | AddV ASAValues ASAValues
+    | SubV ASAValues ASAValues
+    | MultV ASAValues ASAValues
+    | DivV ASAValues ASAValues
+    deriving (Show, Eq)
+
+-- El "generador" del interprete (funcion casi-recursiva)
+-- Recibe el interprete como parametro 'self'
+interpreteMaker :: (ASAValues -> Int) -> (ASAValues -> Int)
+interpreteMaker self expr = case expr of
+    -- Casos base
+    NumV n -> n
+
+    -- Casos recursivos: el interprete se usa a si mismo
+    -- para evaluar subexpresiones
+    AddV e1 e2 -> self e1 + self e2
+    --            ^^^^ El interprete se pasa a si mismo
+
+    SubV e1 e2 -> self e1 - self e2
+    MultV e1 e2 -> self e1 * self e2
+    DivV e1 e2 ->
+        let v2 = self e2
+        in if v2 == 0
+           then error "Division por cero"
+           else self e1 `div` v2
+
+-- El AUTOINTERPRETE: se obtiene aplicando Y al generador
+-- Esto "cierra el ciclo" de autorreferencia
+interprete :: ASAValues -> Int
+interprete = yFix interpreteMaker
+
+-- Propiedad clave: interprete = interpreteMaker interprete
+-- El interprete se recibe a si mismo como argumento!
+\end{lstlisting}
+
+\begin{quote}
+\textbf{Presentador:} ``Observen la línea clave: \texttt{interprete = yFix interpreteMaker}''
+
+\textbf{Presentador:} ``Esto garantiza que \texttt{interprete = interpreteMaker interprete}, es decir, el intérprete se pasa a sí mismo como el parámetro \texttt{self}.''
+
+\textbf{Presentador:} ``¡Esto es autointerpretación! El intérprete se usa a sí mismo para evaluar subexpresiones.''
+\end{quote}
+
+\newpage
+\subsection*{¿Por Qué el Combinador Y Es Necesario?}
+
+\begin{quote}
+\textbf{Presentador:} ``Pregunta: ¿Por qué no podemos hacer esto sin el combinador Y?''
+\end{quote}
+
+\begin{enumerate}
+\item \textbf{En cálculo lambda puro:} No hay nombres, no puedes escribir una función que se llame a sí misma
+
+\item \textbf{Sin combinador Y:} No hay forma de crear el ciclo de autorreferencia necesario
+
+\item \textbf{Con combinador Y:} El punto fijo automáticamente inyecta el intérprete en sí mismo
+\end{enumerate}
+
+\begin{quote}
+\textbf{Presentador:} ``El combinador Y es el \textit{único} mecanismo que permite autointerpretación en cálculo lambda puro.''
+\end{quote}
+
+\subsection*{De Autointerpretación a Metaprogramación}
+
+\begin{quote}
+\textbf{Presentador:} ``La autointerpretación abre la puerta a la metaprogramación. ¿Por qué?''
+\end{quote}
+
+\subsubsection*{Cadena de Implicaciones}
+
+\begin{align*}
+\text{Combinador Y} &\Rightarrow \text{Autointerpretación posible} \\
+&\Rightarrow \text{El código puede tratarse como datos} \\
+&\Rightarrow \text{El programa puede manipular código} \\
+&\Rightarrow \text{Metaprogramación}
+\end{align*}
+
+\subsubsection*{Ejemplos de Metaprogramación}
+
+\begin{quote}
+\textbf{Presentador:} ``Veamos ejemplos concretos de metaprogramación habilitados por el combinador Y:''
+\end{quote}
+
+\textbf{Ejemplo 1: Inspección de Código}
+
+\begin{lstlisting}[language=Haskell, caption=Analizar estructura del programa]
+-- El programa puede examinar su propia estructura
+contieneDivision :: ASAValues -> Bool
+contieneDivision expr = case expr of
+    NumV _ -> False
+    DivV _ _ -> True  -- Encontro una division!
+    AddV e1 e2 -> contieneDivision e1 || contieneDivision e2
+    SubV e1 e2 -> contieneDivision e1 || contieneDivision e2
+    MultV e1 e2 -> contieneDivision e1 || contieneDivision e2
+
+-- Uso: detectar si una expresion tiene divisiones
+-- antes de evaluarla
+evaluacionSegura :: ASAValues -> Maybe Int
+evaluacionSegura expr =
+    if contieneDivision expr
+    then Nothing  -- Advertir: contiene division
+    else Just (interprete expr)
+\end{lstlisting}
+
+\begin{quote}
+\textbf{Presentador:} ``Esto es metaprogramación: el código examina código antes de ejecutarlo.''
+\end{quote}
+
+\newpage
+\textbf{Ejemplo 2: Optimización de Código}
+
+\begin{lstlisting}[language=Haskell, caption=Transformar y optimizar programas]
+-- El programa puede reescribirse a si mismo
+optimizar :: ASAValues -> ASAValues
+optimizar expr = case expr of
+    -- Optimizacion: eliminar sumas con cero
+    AddV (NumV 0) e -> optimizar e
+    AddV e (NumV 0) -> optimizar e
+
+    -- Optimizacion: eliminar multiplicaciones por 1
+    MultV (NumV 1) e -> optimizar e
+    MultV e (NumV 1) -> optimizar e
+
+    -- Optimizacion: multiplicacion por 0 = 0
+    MultV (NumV 0) _ -> NumV 0
+    MultV _ (NumV 0) -> NumV 0
+
+    -- Recursivamente optimizar subexpresiones
+    AddV e1 e2 -> AddV (optimizar e1) (optimizar e2)
+    SubV e1 e2 -> SubV (optimizar e1) (optimizar e2)
+    MultV e1 e2 -> MultV (optimizar e1) (optimizar e2)
+    DivV e1 e2 -> DivV (optimizar e1) (optimizar e2)
+
+    -- Caso base
+    NumV n -> NumV n
+
+-- Evaluar con optimizacion
+evalOptimizado :: ASAValues -> Int
+evalOptimizado = interprete . optimizar
+
+-- Ejemplo:
+-- Original:     (+ (* 0 5) (+ 3 0))
+-- Optimizado:   (+ 0 3) -> 3
+\end{lstlisting}
+
+\begin{quote}
+\textbf{Presentador:} ``El programa se transforma a sí mismo antes de ejecutarse. ¡Esto es metaprogramación en acción!''
+\end{quote}
+
+\textbf{Ejemplo 3: Evaluación Parcial}
+
+\begin{lstlisting}[language=Haskell, caption=Evaluacion parcial con conocimiento en tiempo de compilacion]
+-- Evaluar parcialmente cuando tengamos valores conocidos
+evaluarParcial :: ASAValues -> ASAValues
+evaluarParcial expr = case expr of
+    -- Si ambos operandos son numeros, evaluar inmediatamente
+    AddV (NumV a) (NumV b) -> NumV (a + b)
+    SubV (NumV a) (NumV b) -> NumV (a - b)
+    MultV (NumV a) (NumV b) -> NumV (a * b)
+    DivV (NumV a) (NumV b) | b /= 0 -> NumV (a `div` b)
+
+    -- Si solo uno es numero, optimizar lo posible
+    AddV e1 e2 -> AddV (evaluarParcial e1) (evaluarParcial e2)
+    SubV e1 e2 -> SubV (evaluarParcial e1) (evaluarParcial e2)
+    MultV e1 e2 -> MultV (evaluarParcial e1) (evaluarParcial e2)
+    DivV e1 e2 -> DivV (evaluarParcial e1) (evaluarParcial e2)
+
+    NumV n -> NumV n
+
+-- Ejemplo:
+-- Entrada:   (+ (+ 2 3) (* 4 5))
+-- Parcial:   (+ 5 20)
+-- Parcial2:  25
+\end{lstlisting}
+
+\subsection*{¿Por Qué Esto Requiere el Combinador Y?}
+
+\begin{quote}
+\textbf{Presentador:} ``Estas capacidades de metaprogramación son posibles porque:''
+\end{quote}
+
+\begin{enumerate}
+\item \textbf{Autointerpretación:} El combinador Y permite que el intérprete se procese a sí mismo
+
+\item \textbf{Código = Datos:} Las expresiones (tipo \texttt{ASAValues}) son datos que podemos manipular
+
+\item \textbf{Recursión sin límites:} El combinador Y permite procesar estructuras arbitrariamente anidadas
+
+\item \textbf{Sin primitivas:} Todo esto funciona en cálculo lambda puro, sin necesidad de características especiales del lenguaje
+\end{enumerate}
+
+\subsection*{Demostración: Metaprogramación en Acción}
+
+\begin{lstlisting}[language=Haskell, caption=Pipeline de metaprogramacion completo]
+-- Pipeline de transformaciones metaprogramaticas
+evaluarConMetaprogramacion :: ASAValues -> Int
+evaluarConMetaprogramacion expr =
+    let paso1 = optimizar expr           -- Transformacion 1
+        paso2 = evaluarParcial paso1     -- Transformacion 2
+    in interprete paso2                  -- Interpretacion final
+
+-- Ejemplo completo:
+expr = AddV (MultV (NumV 0) (NumV 999))
+            (AddV (NumV 2) (NumV 3))
+
+-- Paso 1 (optimizar):     (+ 0 (+ 2 3))
+-- Paso 2 (eval parcial):  (+ 0 5)
+-- Paso 3 (optimizar):     5
+-- Resultado:              5
+
+-- SIN metaprogramacion, habria evaluado: 0*999 + 2 + 3
+-- CON metaprogramacion, simplifica antes de evaluar
+\end{lstlisting}
+
+\begin{quote}
+\textbf{Presentador:} ``El combinador Y no solo permite recursión. Habilita que el lenguaje razone sobre sí mismo, se optimice a sí mismo, y se transforme a sí mismo.''
+
+\textbf{Presentador:} ``Esto es el fundamento de:''
+\end{quote}
+
+\begin{itemize}
+\item Compiladores optimizadores
+\item Macros en Lisp/Scheme
+\item Reflection en lenguajes modernos
+\item JIT compilation
+\item Partial evaluation
+\end{itemize}
+
+\begin{quote}
+\textbf{Presentador:} ``Todo esto es posible gracias al simple pero poderoso combinador Y.''
+\end{quote}
+
+\newpage
+\section*{Código Fuente Completo}
+
+\subsection*{YCombinator.hs}
+
+\begin{lstlisting}[language=Haskell]
+module YCombinator where
+
+-- Combinador Y (combinador de punto fijo)
+-- Version practica para Haskell con evaluacion perezosa
+--
+-- Y = λf. (λx. f (x x)) (λx. f (x x))
+--
+-- En Haskell, gracias a la evaluacion perezosa, podemos usar
+-- la forma mas simple: yFix f = f (yFix f)
+--
+-- Esta funcion toma una funcion casi-recursiva y retorna
+-- su punto fijo, permitiendo recursion sin autorreferencia.
+
+yFix :: ((a -> b) -> (a -> b)) -> (a -> b)
+yFix f = f (yFix f)
+\end{lstlisting}
+
+\subsection*{Evaluator.hs (Fragmento relevante)}
+
+\begin{lstlisting}[language=Haskell]
+-- Generador de la funcion de evaluacion
+-- Esta es una funcion casi recursiva que toma como argumento
+-- la funcion recursiva misma (evalRec)
+--
+-- Nota importante: evalMaker NUNCA se refiere a si misma por nombre
+-- La recursion se logra completamente a traves del combinador Y
+
+evalMaker :: (ASAValues -> Int) -> (ASAValues -> Int)
+evalMaker evalRec expr = case expr of
+    NumV n -> n
+    AddV e1 e2 -> evalRec e1 + evalRec e2
+    SubV e1 e2 -> evalRec e1 - evalRec e2
+    MultV e1 e2 -> evalRec e1 * evalRec e2
+    DivV e1 e2 ->
+        let v2 = evalRec e2
+        in if v2 == 0
+           then error "Division por cero"
+           else evalRec e1 `div` v2
+
+-- Funcion de evaluacion obtenida aplicando el combinador Y
+-- Propiedad de punto fijo: evalExpr = evalMaker evalExpr
+evalExpr :: ASAValues -> Int
+evalExpr = yFix evalMaker
+\end{lstlisting}
+
+\section*{Referencias y Lecturas Adicionales}
+
+\begin{itemize}
+\item \textbf{Cálculo Lambda:} Church, Alonzo. ``The Calculi of Lambda-Conversion'' (1941)
+\item \textbf{Combinadores:} Curry, Haskell B. ``Combinatory Logic'' (1958)
+\item \textbf{Punto Fijo:} Tarski's Fixed Point Theorem
+\item \textbf{Implementación práctica:} Pierce, Benjamin C. ``Types and Programming Languages'' (2002)
+\end{itemize}
+
+\end{document}

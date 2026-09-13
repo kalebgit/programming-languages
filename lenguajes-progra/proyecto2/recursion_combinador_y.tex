@@ -1,0 +1,606 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+\usepackage{amsfonts, amsmath}
+\usepackage[spanish, mexico, american]{babel}
+\usepackage{amssymb}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{url}
+\graphicspath{{./}}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{cite}
+
+
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc}
+
+% Configuración de listings para código
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    language=Haskell,
+    commentstyle=\color{green!50!black},
+    keywordstyle=\color{blue},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    backgroundcolor=\color{gray!10}
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Recursión, Combinadores y Autointerpretación}
+\rhead{}
+\title{Recursión, Combinadores y Autointerpretación}
+\author{Jim\'enez Rivera Emiliano Kaleb}
+\date{\today}
+
+\begin{document}
+
+% Portada
+\begin{center}
+  \vspace{0.8cm}
+  \LARGE
+  UNIVERSIDAD NACIONAL AUTÓNOMA DE MÉXICO
+  \vspace{0.8cm}
+
+  \LARGE
+  FACULTAD DE CIENCIAS
+  \vspace{1.7cm}
+
+  \Large
+  Recursión, Combinadores y Autointerpretación \\
+  \vspace{0.5cm}
+  \normalsize
+  Proyecto 02
+  \vspace{1.3cm}
+
+  \normalsize
+  PRESENTA \\
+  \vspace{.3cm}
+  \large
+  Jim\'enez Rivera Emiliano Kaleb
+  \vspace{1.3cm}
+
+  \normalsize
+  PROFESOR \\
+  \vspace{.3cm}
+  \large
+  Manuel Soto Romero
+  \vspace{1.3cm}
+
+  \normalsize
+  ASIGNATURA \\
+  \vspace{.3cm}
+  \large
+  Lenguajes de Programaci\'on
+  \vspace{1.3cm}
+
+  \today
+\end{center}
+
+\newpage
+
+\tableofcontents
+\newpage
+
+\section{Introducción}
+
+El cálculo lambda, desarrollado por Alonzo Church en la década de 1930, constituye uno de los aspectos teóricos más importantes de nuestra carrera (Ciencias de la computación) y de los lenguajes de programación funcionales. Una característica muy importante del cálculo lambda es que no incluye primitivas (es decir, operaciones o construcciones básicas predefinidas, algo as\'i como los lets que implementamos en el proyecto anterior) para la recursión ni para la definición de funciones con nombres. Sin embargo, a pesar de esta restricci\'on, es posible expresar funciones recursivas mediante el uso de combinadores de punto fijo, siendo el combinador Y el más conocido y estudiado \cite{curry1958}.
+
+
+El combinador Y, también conocido como el combinador paradójico de Curry, permite construir funciones recursivas sin necesidad de usar iteraciones explícitas o referencias nominales  a la propia función (es decir, la capacidad de referirse a una función por su nombre). Esta capacidad aparte de demostrar la completitud de Turing del cálculo lambda, también proporciona una base teórica para comprender mejor cómo la recursión puede implementarse en lenguajes funcionales \cite{barendregt1984}, como lo vimos en toda la teor\'ia de esta materia.
+
+En el contexto de la meta-programación y la autointerpretación el combinador Y tiene protagonismo. Los auto-intérpretes son programas capaces de interpretar su propio lenguaje de programación. La capacidad de un sistema para razonar sobre sí mismo y modificar su propio comportamiento es muy aplicado en áreas como la optimización de compiladores, los sistemas de tipos y la verificación formal de programas.
+
+El trabajo tiene como objetivo analizar cómo el combinador Y puede utilizarse para construir programas que se autointerpretan o realizan meta-programación en lenguajes funcionales.
+
+\section{Marco Teórico}
+
+\subsection{Cálculo Lambda y Recursión}
+
+El cálculo lambda consiste solo de tres construcciones sintácticas: variables, abstracción lambda y aplicación de funciones \cite{barendregt1984}. Formalmente, el conjunto de términos lambda $\Lambda$ se define en BNF como:
+
+\begin{align*}
+    <expr>::= &\ x \quad \text{(variable)} \\
+            &\ |\  \lambda x.<expr> \quad \text{(abstracción)} \\
+            &\ |\  <expr>\ <expr>\quad \text{(aplicación)}
+\end{align*}
+
+La evaluación en cálculo lambda se realiza mediante $\beta$-reducción, que sustituye el argumento de una función en su cuerpo: $(\lambda x.M)N \rightarrow_\beta M[x := N]$, donde $M[x := N]$ denota la sustitución de todas las ocurrencias de $x$ en $M$ por $N$.
+
+Una pregunta muy comun es: ¿cómo se puede expresar recursión en un sistema que no tiene nombres ni referencias circulares (es decir que se pueda referenciar a s\'i misma)? La respuesta recae en el teorema de punto fijo de Curry, que establece que para cualquier término $F$ en cálculo lambda, existe un término $X$ tal que $X = F\ X$ \cite{curry1958}. Este resultado para nada trivial permite construir funciones recursivas mediante la búsqueda de puntos fijos.
+
+\subsection{Teorema de Punto Fijo y Combinador Y}
+
+El combinador Y es una función de orden superior que toma como argumento una función $f$ y retorna su punto fijo, es decir, un valor $x$ tal que $f(x) = x$. La definición canónica del combinador Y en cálculo lambda es:
+
+\begin{equation}
+    Y = \lambda f.(\lambda x.f\ (x\ x))\ (\lambda x.f\ (x\ x))
+\end{equation}
+
+Para verificar que $Y$ efectivamente computa puntos fijos, se puede realizar la siguiente derivación mediante $\beta$-reducción:
+
+\begin{align*}
+    Y\ F &= (\lambda f.(\lambda x.f\ (x\ x))\ (\lambda x.f\ (x\ x)))\ F \\
+         &\rightarrow_\beta (\lambda x.F\ (x\ x))\ (\lambda x.F\ (x\ x)) \\
+         &\rightarrow_\beta F\ ((\lambda x.F\ (x\ x))\ (\lambda x.F\ (x\ x))) \\
+         &= F\ (Y\ F)
+\end{align*}
+
+Esta derivación muestra que $Y\ F$ satisface la ecuación característica de un punto fijo presentada anteriormente, i.e. es igual a $F$ aplicado a sí mismo. Esta propiedad permite definir funciones recursivas sin necesidad de autorreferencia explícita \cite{barendregt1984}.
+
+\subsection{Meta-programación y Autointerpretación}
+
+La meta-programación se refiere a la capacidad de los programas para tratar otros programas (o a sí mismos) como datos que pueden ser manipulados, analizados o generados \cite{sheard2001}. En el contexto del cálculo lambda, esto se expresa de manera natural ya que los programas son funciones que pueden tomar otras funciones como argumentos y producir funciones como resultados, que algunas veces son llamadas como funciones de orden superior.
+
+Un auto-intérprete es un programa escrito en un lenguaje $L$ que puede interpretar programas escritos en el mismo lenguaje $L$ \cite{mogensen1992}. La construcción de auto-intérpretes en cálculo lambda es posible mediante el uso de codificaciones (representaciones de datos mediante su comportamiento funcional) de términos lambda como datos lambda (por ejemplo, mediante Church encoding o Scott encoding) y la aplicación de combinadores de punto fijo para manejar la recursividad de la interpretación.
+
+Algunos de estos ejemplos de codificaci\'on Church son los números naturales que se codifican como iteradores:
+
+  \begin{align*}
+      \overline{0} &= \lambda s.\lambda x.x \\
+      \overline{1} &= \lambda s.\lambda x.s\ x \\
+      \overline{2} &= \lambda s.\lambda x.s\ (s\ x) \\
+      \overline{n} &= \lambda s.\lambda x.s^n\ x
+  \end{align*}
+
+  y los booleanos se representan como selectores:
+  \begin{align*}
+      \texttt{true} &= \lambda t.\lambda f.t \\
+      \texttt{false} &= \lambda t.\lambda f.f \\
+      \texttt{if} &= \lambda b.\lambda x.\lambda y.b\ x\ y
+  \end{align*}
+As\'i existen otras codificaciones.
+
+Algo interesante por mencionar es que Mogensen \cite{mogensen1992} demostró que es posible construir auto-intérpretes extremadamente compactos y eficientes en cálculo lambda, con implementaciones que requieren apenas unos cientos de bits. Estos auto-intérpretes utilizan técnicas como Higher-Order Abstract Syntax (HOAS) y codificaciones de Church para representar términos lambda como funciones lambda, lo que provoca que el proceso de interpretación se reduzca a aplicaciones de funciones y $\beta$-reducciones.
+
+El combinador Y es crucial en estos auto-intérpretes al permitir que la función de interpretación se llame a sí misma recursivamente para evaluar subexpresiones, sin necesidad de mecanismos de recursión primitivos del lenguaje anfitrión \cite{brown2016}.
+
+\subsection{Teorema de Church-Turing y Completitud}
+
+El teorema de Church establece que una función número-teórica $f$ es recursiva si y solo si $f$ es $\lambda$-definible \cite{church1936}. Este resultado muy importante conecta el cálculo lambda con la teoría de la computabilidad y demuestra que cualquier función computable puede expresarse mediante términos lambda, incluyendo aquellas que requieren recursión, ¡Justo las que necesitamos y queremos aplicar!
+
+La existencia del combinador Y es relevante para esta completitud, ya que proporciona el mecanismo mediante el cual la recursión y la minimización (el operador $\mu$) pueden implementarse en cálculo lambda. Sin el combinador Y u otro combinador de punto fijo equivalente, el cálculo lambda estaría limitado a funciones que pueden expresarse mediante composición finita de abstracciones y aplicaciones, lo que no sería suficiente para la completitud de Turing \cite{barendregt1984}.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\subsection{Autointerpretación vs. Interpretación Tradicional}
+
+Ahora bien, distinción entre un intérprete tradicional y un autointérprete es fundamental para comprender cómo el combinador Y permite la metaprogramación en lenguajes funcionales.
+
+\textbf{Diferencias Conceptuales}
+
+\textbf{Interpretación Tradicional:}
+\begin{itemize}
+    \item El intérprete está escrito en un lenguaje \textit{anfitrión} $L_H$ (host language)
+    \item Interpreta programas escritos en un lenguaje \textit{objeto} $L_O$ (object language o el que estamos desarrollando)
+    \item No hay capacidad de autorreflexión del lenguaje sobre sí mismo
+\end{itemize}
+
+\textbf{Autointerpretación:}
+\begin{itemize}
+    \item El intérprete está escrito en el mismo lenguaje $L$ que interpreta
+    \item $L_H = L_O = L$ (la mayor\'ia de las veces)
+    \item \textbf{Ejemplo:} El intérprete de Python llamado PyPy, que está escrito en un subconjunto de Python
+
+    \item Permite razonamiento formal sobre propiedades del lenguaje
+    \item Habilita metaprogramación: el programa puede modificar su propio comportamiento
+\end{itemize}
+
+
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=1.8cm,
+    box/.style={rectangle, draw, minimum width=3.2cm, minimum height=1cm, align=center, thick},
+    decision/.style={diamond, draw, minimum width=2.5cm, minimum height=2.5cm, align=center, aspect=2, thick},
+    arrow/.style={->, >=stealth, thick}
+]
+% === LADO IZQUIERDO: INTERPRETACIÓN TRADICIONAL ===
+\node[box, fill=blue!10] (input1) {Programa\\en $L_O$};
+\node[box, below of=input1, fill=yellow!20] (interp1) {Intérprete\\(escrito en $L_H$)};
+\node[decision, below of=interp1, yshift=-0.3cm] (check1) {¿Es\\operación\\atómica?};
+\node[box, below of=check1, xshift=-2.5cm, yshift=-1cm, fill=green!20] (atomic1) {Ejecutar\\directamente};
+\node[box, below of=check1, xshift=2.5cm, yshift=-1cm, fill=orange!20] (recurse1) {Llamar a\\función $f$\\en $L_H$};
+\node[box, below of=check1, yshift=-3.5cm, fill=red!20] (result1) {Resultado};
+
+% Flechas lado izquierdo
+\draw[arrow] (input1) -- (interp1);
+\draw[arrow] (interp1) -- (check1);
+\draw[arrow] (check1) -- node[left, near start, font=\small] {Sí} (atomic1);
+\draw[arrow] (check1) -- node[right, near start, font=\small] {No} (recurse1);
+\draw[arrow] (atomic1) -- (result1);
+\draw[arrow] (recurse1) -- (result1);
+
+% Etiqueta
+\node[above of=input1, yshift=0.5cm, font=\bfseries\Large] {Interpretación Tradicional};
+\node[below of=result1, yshift=-0.5cm, font=\large] {$L_H \neq L_O$};
+
+% === LADO DERECHO: AUTOINTERPRETACIÓN ===
+\node[box, fill=blue!10, right of=input1, xshift=7cm] (input2) {Programa\\en $L$};
+\node[box, below of=input2, fill=yellow!20] (interp2) {Autointérprete\\(escrito en $L$)};
+\node[decision, below of=interp2, yshift=-0.3cm] (check2) {¿Es\\operación\\atómica?};
+\node[box, below of=check2, xshift=-2.5cm, yshift=-1cm, fill=green!20] (atomic2) {Ejecutar\\directamente};
+\node[box, below of=check2, xshift=2.5cm, yshift=-1cm, fill=purple!20] (recurse2) {Llamar a\\$\texttt{evalRec}$\\(sí mismo)};
+\node[box, below of=check2, yshift=-3.5cm, fill=red!20] (result2) {Resultado};
+
+% Flecha de autorreferencia (Punto fijo via Y)
+\draw[arrow, dashed, thick, color=red!70!black, line width=1.2pt] 
+    (recurse2.north east) -- ++(1.8,0) |- (interp2.east) 
+    node[pos=0.25, right, font=\small\bfseries, text width=2cm, align=center] 
+    {Punto fijo\\vía $Y$};
+
+% Flechas lado derecho
+\draw[arrow] (input2) -- (interp2);
+\draw[arrow] (interp2) -- (check2);
+\draw[arrow] (check2) -- node[left, near start, font=\small] {Sí} (atomic2);
+\draw[arrow] (check2) -- node[right, near start, font=\small] {No} (recurse2);
+\draw[arrow] (atomic2) -- (result2);
+\draw[arrow] (recurse2) -- (result2);
+
+% Etiqueta
+\node[above of=input2, yshift=0.5cm, font=\bfseries\Large] {Autointerpretación};
+\node[below of=result2, yshift=-0.5cm, font=\large] {$L_H = L_O = L$};
+
+% === CAJA DE METAPROGRAMACIÓN (CENTRADA ABAJO) ===
+\node[box, dashed, thick, minimum width=8cm, minimum height=2.2cm, 
+      below of=result2, xshift=-3.5cm, yshift=-2.5cm, fill=cyan!10] (meta) 
+      {\textbf{\Large Metaprogramación}\\[0.3cm]
+       El programa puede:\\[0.1cm]
+       $\bullet$ Inspeccionarse a sí mismo\\
+       $\bullet$ Modificar su comportamiento\\
+       $\bullet$ Generar código dinámicamente};
+
+\end{tikzpicture}
+\caption{Nota importante: En la autointerpretación, el combinador Y permite que el intérprete se pase a sí mismo como argumento (flecha roja punteada), habilitando el ciclo de autorreferencia necesario para una posible metaprogramación. La caja inferior muestra las capacidades que surgen de esta autorreferencia.}
+\label{fig:comparacion}
+\end{figure}
+
+
+
+
+
+
+
+
+
+
+
+\textbf{El Rol del Combinador Y en la Autointerpretación (ver secci\'on 3)}
+
+El combinador Y es el mecanismo que \textit{cierra el ciclo} de autorreferencia en la autointerpretación:
+
+Sabemos que $\texttt{evalMaker}$ (abstracci\'on del int\'erprete) necesita recibir el intérprete como argumento, pero sin el Combinador Y la función no puede llamarse a sí misma por nombre (no es posible en c\'alculo lambda). Pero por otro lado, con el Combinador Y, $Y\ \texttt{evalMaker} = \texttt{evalMaker}\ (Y\ \texttt{evalMaker})$, i.e. el intérprete se recibe a sí mismo como argumento automáticamente y la ecuación de punto fijo permite recursión pura.
+
+\textbf{Conexión con la Metaprogramación}
+
+La metaprogramación surge naturalmente de la autointerpretación porque haciendo una cadena de implicaciones:
+
+\begin{align*}
+    \text{Autointerpretación} &\Rightarrow \text{Programa = Dato + Código} \\
+    &\Rightarrow \text{El código puede manipular código} \\
+    &\Rightarrow \text{Metaprogramación}
+\end{align*}
+
+Algunos ejemplos de estas capacidades de la metaprogramaci\'on son:
+\begin{itemize}
+    \item El programa puede examinar su propia estructura
+    \begin{lstlisting}
+    -- Ejemplo: detectar si una expresion contiene division
+    hasDiv :: ASAValues -> Bool
+    hasDiv (DivV _ _) = True
+    hasDiv (AddV e1 e2) = hasDiv e1 || hasDiv e2
+    -- ... (examina la representacion del programa)
+    \end{lstlisting}
+
+    \item El programa puede modificarse antes de ejecutarse
+    \begin{lstlisting}
+    -- Ejemplo: optimizar eliminando sumas con cero
+    optimize :: ASAValues -> ASAValues
+    optimize (AddV (NumV 0) e) = optimize e
+    optimize (AddV e (NumV 0)) = optimize e
+    -- ... (reescribe el programa)
+    \end{lstlisting}
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\section{Implementación: Intérprete de Expresiones Aritméticas}
+
+En esta sección se presenta la implementación completa del objetivo principal del proyecto: \textbf{implementar el combinador Y y usarlo para definir una función recursiva que interprete expresiones aritméticas simples}.
+
+Se debe resaltar que lo verdaderamente no trivial es hacer la interpretación de expresiones aritméticas (suma, resta, multiplicación, división) sin autorreferencia, i.e. que la función de evaluación no se refiere a sí misma por nombre.
+
+La implementación se desarrolla en Haskell y se basa en la estructura similar del proyecto anterior en cuesti\'on de definiciones del lenguaje. As\'i que se saltar\'an las definciones correspondientes a lo l\'exico y algunas reglas sem\'anticas que ser vieron a lo largo del proyecto anterior, por lo que nos enfocaremos a lo propuesto en este proyecto.
+
+
+
+
+
+%%%%% ================ inicio cambios ==============
+
+\subsection{Implementación del Combinador Y}
+
+El combinador Y permite construir funciones recursivas mediante puntos fijos. Su implementación en Haskell de acuerdo a su definici\'on usual es:
+
+\begin{lstlisting}[caption={Implementación del combinador Y}]
+-- Combinador Y (combinador de punto fijo)
+-- Y = \f. (\x. f (x x)) (\x. f (x x))
+yCombinator :: (a -> a) -> a
+yCombinator f = f (yCombinator f)
+\end{lstlisting}
+
+Sin embargo, esta definición directa causa divergencia (que no termina) en Haskell debido a la evaluación perezosa. Para hacerla práctica, usamos una versión que evita la evaluación infinita mediante la expresi\'on:
+
+\begin{lstlisting}[caption={Implementación práctica del combinador Y en Haskell}]
+-- Usamos eta-expansion para evitar divergencia
+yFix :: ((a -> b) -> (a -> b)) -> (a -> b)
+yFix f = f (yFix f)
+\end{lstlisting}
+
+\subsection{Función de Evaluación Recursiva}
+
+La función de evaluación se define como una función ``casi-recursiva'' que recibe la función recursiva como argumento. El combinador Y proporciona el punto fijo necesario para la recursión:
+
+\begin{lstlisting}[caption={Función de evaluación con combinador Y}]
+-- Generador de la funcion de evaluacion
+-- toma la funcion recursiva como argumento
+evalMaker :: (ASAValues -> Int) -> (ASAValues -> Int)
+evalMaker evalRec expr = case expr of
+    -- Caso base: numero
+    NumV n -> n
+
+    -- Casos recursivos: operaciones binarias
+    AddV e1 e2 -> evalRec e1 + evalRec e2
+
+    SubV e1 e2 -> evalRec e1 - evalRec e2
+
+    MultV e1 e2 -> evalRec e1 * evalRec e2
+
+    DivV e1 e2 ->
+        let v2 = evalRec e2
+        in if v2 == 0
+           then error "Division por cero"
+           else evalRec e1 `div` v2
+
+-- Funcion de evaluacion obtenida aplicando Y
+evalExpr :: ASAValues -> Int
+evalExpr = yFix evalMaker
+\end{lstlisting}
+
+Observemos que \texttt{evalMaker} nunca se refiere a sí misma por nombre. La recursión se logra completamente a través del combinador Y, que garantiza que \texttt{evalRec} sea exactamente \texttt{evalMaker evalRec}, satisfaciendo la ecuación de punto fijo.
+
+
+
+
+
+\subsection{Autointerpretación: Qué es y por qué funciona}
+
+Un \textbf{autointérprete} es un programa que puede interpretar su propio lenguaje. En nuestro caso, es un evaluador de expresiones que se usa a sí mismo para evaluar subexpresiones. Este concepto es fundamental en teoría de lenguajes de programación y conecta con los teoremas de Gödel sobre autorreferencia en sistemas formales.
+
+El punto importante que permite la autointerpretación es que el combinador Y permite que un intérprete \textit{se pase a sí mismo como argumento}. Esto se expresa mediante la ecuación de punto fijo:
+
+\begin{equation*}
+\texttt{evalExpr} = \texttt{yFix evalMaker} = \texttt{evalMaker evalExpr}
+\end{equation*}
+
+Esta ecuación garantiza que el intérprete \texttt{evalExpr} se recibe a sí mismo como el parámetro \texttt{evalRec} dentro de \texttt{evalMaker}. Observemos que \textbf{\texttt{evalMaker} nunca se llama a sí misma por nombre}; en cambio, utiliza el parámetro \texttt{evalRec} que el combinador Y le proporciona automáticamente.
+
+\subsubsection{Ejemplo de Autointerpretación Paso a Paso}
+
+Para ilustrar cómo funciona la autointerpretación mediante el combinador Y, expandamos manualmente la evaluación de una expresión aritmética simple:
+
+\begin{align*}
+&\texttt{evalExpr (AddV (NumV 2) (NumV 3))} \\
+&= \texttt{(yFix evalMaker) (AddV (NumV 2) (NumV 3))} \\
+&= \texttt{(evalMaker (yFix evalMaker)) (AddV (NumV 2) (NumV 3))} \quad \text{(def. de yFix)} \\
+&= \texttt{(evalMaker evalExpr) (AddV (NumV 2) (NumV 3))} \quad \text{(punto fijo)} \\
+&= \texttt{evalExpr (NumV 2) + evalExpr (NumV 3)} \quad \text{(expansión de evalMaker)} \\
+&= \texttt{2 + 3} \\
+&= \texttt{5}
+\end{align*}
+
+En este ejemplo, observamos cómo \texttt{evalMaker} recibe \texttt{evalExpr} (que es igual a \texttt{yFix evalMaker}) como su primer argumento. Esto permite que el intérprete se use a sí mismo para evaluar las subexpresiones \texttt{(NumV 2)} y \texttt{(NumV 3)}, demostrando la propiedad de autointerpretación sin que \texttt{evalMaker} contenga ninguna autorreferencia explícita nominal.
+
+\subsection{Implementación de Autointérprete Completo}
+
+Extendiendo la idea anterior, podemos construir un autointérprete más completo que demuestre claramente el patrón de autointerpretación habilitado por el combinador Y:
+
+\begin{lstlisting}[caption={Autointérprete con Combinador Y}]
+-- El generador del interprete (funcion casi-recursiva)
+-- Recibe el interprete como parametro 'self'
+interpreteMaker :: (ASAValues -> Int) -> (ASAValues -> Int)
+interpreteMaker self expr = case expr of
+    -- Casos base
+    NumV n -> n
+
+    -- Casos recursivos: el interprete se usa a si mismo
+    -- para evaluar subexpresiones
+    AddV e1 e2 -> self e1 + self e2 -- el interprete se pasa a si mismo :0
+
+    SubV e1 e2 -> self e1 - self e2
+    MultV e1 e2 -> self e1 * self e2
+    DivV e1 e2 ->
+        let v2 = self e2
+        in if v2 == 0
+           then error "Division por cero"
+           else self e1 `div` v2
+
+-- El AUTOINTERPRETE se obtiene aplicando Y al generador
+interprete :: ASAValues -> Int
+interprete = yFix interpreteMaker
+
+-- interprete = interpreteMaker interprete
+-- asi vemos que el interprete se recibe a si mismo como argumento
+\end{lstlisting}
+
+La propiedad fundamental es que \texttt{interprete = interpreteMaker interprete}. Esto significa que cuando \texttt{interpreteMaker} utiliza su parámetro \texttt{self}, está utilizando el intérprete completo \texttt{interprete}, lo que permite la autorreferencia sin violar las restricciones del cálculo lambda puro.
+
+\subsection{Metaprogramación Habilitada por el Combinador Y}
+
+La autointerpretación abre la puerta a la metaprogramación. Una vez que el lenguaje puede interpretarse a sí mismo, el código se convierte en datos que pueden ser manipulados, analizados y transformados como se mencion\'o anteriormente.
+Una aplicación directa de la metaprogramación es la capacidad del programa para examinar su propia estructura antes de ejecutarse. Por ejemplo, podemos implementar un analizador que detecte operaciones peligrosas:
+
+\begin{lstlisting}[caption={Análisis estático de código}]
+-- El programa puede examinar su propia estructura
+contieneDivision :: ASAValues -> Bool
+contieneDivision expr = case expr of
+    NumV _ -> False
+    DivV _ _ -> True  -- Encontro una division
+    AddV e1 e2 -> contieneDivision e1 || contieneDivision e2
+    SubV e1 e2 -> contieneDivision e1 || contieneDivision e2
+    MultV e1 e2 -> contieneDivision e1 || contieneDivision e2
+
+-- Uso: detectar si una expresion tiene divisiones
+-- antes de evaluarla para advertir al usuario
+evaluacionSegura :: ASAValues -> Maybe Int
+evaluacionSegura expr =
+    if contieneDivision expr
+    then Nothing  -- Advertir: contiene division potencialmente peligrosa
+    else Just (interprete expr)
+\end{lstlisting}
+
+Esta función \texttt{contieneDivision} es un ejemplo de metaprogramación: el código examina código. Esto es posible porque las expresiones (tipo \texttt{ASAValues}) son datos que podemos inspeccionar recursivamente. El combinador Y permite que esta inspección funcione para estructuras arbitrariamente anidadas sin necesidad de recursión explícita.
+
+\subsubsection{Optimización de Código}
+
+Otra aplicación importante es la capacidad del programa para transformarse a sí mismo antes de ejecutarse, eliminando operaciones redundantes:
+
+\begin{lstlisting}[caption={Transformación y optimización de programas}]
+-- El programa puede reescribirse a si mismo
+optimizar :: ASAValues -> ASAValues
+optimizar expr = case expr of
+    -- eliminar sumas con cero
+    AddV (NumV 0) e -> optimizar e
+    AddV e (NumV 0) -> optimizar e
+
+    --  eliminar multiplicaciones por 1
+    MultV (NumV 1) e -> optimizar e
+    MultV e (NumV 1) -> optimizar e
+
+    --  multiplicacion por 0 = 0
+    MultV (NumV 0) _ -> NumV 0
+    MultV _ (NumV 0) -> NumV 0
+
+    -- Recursivamente optimizar subexpresiones
+    AddV e1 e2 -> AddV (optimizar e1) (optimizar e2)
+    SubV e1 e2 -> SubV (optimizar e1) (optimizar e2)
+    MultV e1 e2 -> MultV (optimizar e1) (optimizar e2)
+    DivV e1 e2 -> DivV (optimizar e1) (optimizar e2)
+
+    -- Caso base
+    NumV n -> NumV n
+
+-- optimizar antes de evaluar
+evalOptimizado :: ASAValues -> Int
+evalOptimizado = interprete . optimizar
+\end{lstlisting}
+
+Esta función \texttt{optimizar} demuestra metaprogramación transformativa: el programa se reescribe a sí mismo para mejorar su eficiencia. Por ejemplo, la expresión \texttt{AddV (MultV (NumV 0) (NumV 999)) (NumV 5)} se simplifica a \texttt{AddV (NumV 0) (NumV 5)} y luego a \texttt{NumV 5} antes de ser evaluada, evitando cálculos innecesarios.
+
+Estas capacidades de metaprogramación (inspección y transformación de código) son fundamentales en compiladores modernos, sistemas de tipos, y herramientas de análisis estático. El combinador Y proporciona el mecanismo teórico que hace posible la autointerpretación, que a su vez habilita estas técnicas de metaprogramación.
+
+%%%%% CAMBIOS PRACTICOS !!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+
+
+
+
+\subsection{Análisis teórico integrador}
+\begin{enumerate}
+    \item \textbf{Recursión sin autorreferencia}: \texttt{evalMaker} no contiene ninguna referencia a sí misma. La recursión sale del combinador Y.
+
+    \item \textbf{Punto fijo que podemos observar}: Podemos verificar que \texttt{evalExpr = evalMaker evalExpr}, cumpliendo la ecuación característica del punto fijo.
+
+    \item \textbf{Meta-programación}: El evaluador manipula representaciones de programas (valores de tipo \texttt{ASAValues}) como datos, demostrando capacidades meta-programáticas básicas. Adem\'as de detecci\'on de errores al hacer divisi\'on lo cual es muy buen ejemplo de meta programaci\'on.
+\end{enumerate}
+
+El combinador Y continúa siendo un área activa de investigación en la intersección de teoría de lenguajes de programación y práctica de ingeniería de software, con lo que demostramos su relevancia de los fundamentos teóricos del cálculo lambda en el desarrollo de sistemas modernos.
+
+\begin{thebibliography}{99}
+
+\bibitem{church1936}
+A. Church, ``An unsolvable problem of elementary number theory,'' \textit{American Journal of Mathematics}, vol. 58, no. 2, pp. 345--363, 1936.
+
+\bibitem{curry1958}
+H. B. Curry and R. Feys, \textit{Combinatory Logic}, vol. 1. Amsterdam: North-Holland, 1958.
+
+\bibitem{barendregt1984}
+H. P. Barendregt, \textit{The Lambda Calculus: Its Syntax and Semantics}, vol. 103. Amsterdam: North-Holland, 1984.
+
+\bibitem{mogensen1992}
+T. Æ. Mogensen, ``Efficient self-interpretation in lambda calculus,'' \textit{Journal of Functional Programming}, vol. 2, no. 3, pp. 345--363, Jul. 1992.
+
+\bibitem{pierce2002}
+B. C. Pierce, \textit{Types and Programming Languages}. Cambridge, MA: MIT Press, 2002.
+
+\bibitem{sheard2001}
+T. Sheard and S. Peyton Jones, ``Template meta-programming for Haskell,'' in \textit{Proceedings of the 2001 ACM SIGPLAN Haskell Workshop}, Firenze, Italy, 2001, pp. 1--16.
+
+\bibitem{brown2016}
+M. Brown and J. Palsberg, ``Breaking through the normalization barrier: A self-interpreter for F-omega,'' in \textit{Proceedings of the 43rd Annual ACM SIGPLAN-SIGACT Symposium on Principles of Programming Languages}, St. Petersburg, FL, USA, 2016, pp. 5--17.
+
+\bibitem{taha2000}
+W. Taha and T. Sheard, ``MetaML and multi-stage programming with explicit annotations,'' \textit{Theoretical Computer Science}, vol. 248, no. 1--2, pp. 211--242, Oct. 2000.
+
+\bibitem{might2008}
+M. Might, ``Memoizing recursive functions via the fixed-point Y combinator,'' [Online]. Available: https://matt.might.net/articles/implementation-of-recursive-fixed-point-y-combinator-in-javascript-for-memoization/. [Accessed: 09-Dec-2025].
+
+\bibitem{stanford2024}
+Stanford Encyclopedia of Philosophy, ``The Lambda Calculus: Appendix on Recursive Functions,'' Fall 2024 Edition. [Online]. Available: https://plato.stanford.edu/archives/fall2024/entries/lambda-calculus/recursive-functions.html. [Accessed: 09-Dec-2025].
+
+\bibitem{tromp2012}
+J. Tromp, ``Binary lambda calculus and combinatory logic,'' in \textit{Randomness and Complexity, from Leibniz to Chaitin}, Calude, C. S., Ed. Singapore: World Scientific, 2007, pp. 237--260.
+
+\end{thebibliography}
+
+\end{document}
+
+
+
+
+
+
+
+

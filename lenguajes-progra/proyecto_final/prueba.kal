@@ -1,0 +1,21 @@
+(let ((Y (lambda (f)
+           ((lambda (x) (f (x x)))
+            (lambda (x) (f (x x)))))))
+  (let ((eval (Y (lambda (self)
+                   (lambda (expr)
+                     (if (= (head expr) "num")
+
+                         (head (tail expr))
+                         
+                         (if (= (head expr) "add")
+                             (+ (self (head (tail expr)))
+                                (self (head (tail (tail expr)))))
+                             
+                             (if (= (head expr) "mult")
+                                 (* (self (head (tail expr)))
+                                    (self (head (tail (tail expr)))))
+                                 
+                                 (error "Operación desconocida")))))))))
+    
+    (eval ["add", ["num", 5], 
+                  ["mult", ["num", 2], ["num", 3]]])))

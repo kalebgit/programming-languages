@@ -1,0 +1,692 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{geometry}
+\usepackage{fancyvrb}
+\geometry{margin=1in}
+
+% Configuración de colores
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\definecolor{outputcolor}{rgb}{0.1,0.1,0.4}
+
+\lstdefinestyle{haskellstyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2
+}
+
+\lstset{style=haskellstyle}
+
+\title{Demostraciones: Recursión, Autointerpretación y Metaprogramación\\
+\large con el Combinador Y}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section*{Guión para Demostraciones en Vivo}
+
+Este documento presenta el diálogo y las demostraciones para mostrar el funcionamiento del Combinador Y en tres contextos: recursión básica, autointerpretación y metaprogramación.
+
+\newpage
+\section{Demostración 1: Recursión con el Combinador Y}
+
+\subsection*{Introducción}
+
+\begin{quote}
+\textbf{Presentador:} ``Vamos a comenzar demostrando cómo funciona la recursión usando el combinador Y. Lo especial aquí es que la función de evaluación \textbf{nunca se llama a sí misma por nombre}.''
+
+\textbf{Presentador:} ``Ejecutemos el programa de test de expresiones aritméticas...''
+\end{quote}
+
+\subsection*{Ejecución del Programa}
+
+\begin{verbatim}
+$ ./test_expresiones
+==========================================
+TEST: EVALUACION DE EXPRESIONES ARITMETICAS
+CON COMBINADOR Y
+==========================================
+
+TEST 1: Expresion simple
+========================
+Expresion: (+ 2 3)
+Resultado: 5
+\end{verbatim}
+
+\subsection*{Explicación Paso a Paso}
+
+\begin{quote}
+\textbf{Presentador:} ``Veamos cómo se expande esta evaluación internamente...''
+\end{quote}
+
+\begin{verbatim}
+Expansion paso a paso:
+  evalExpr (+ 2 3)
+  = (yFix evalMaker) (+ 2 3)
+  = (evalMaker evalExpr) (+ 2 3)    [por punto fijo]
+  = evalExpr 2 + evalExpr 3
+  = 2 + 3
+  = 5
+\end{verbatim}
+
+\begin{quote}
+\textbf{Presentador:} ``Observen los pasos clave:''
+\end{quote}
+
+\textbf{Paso 1:} \texttt{evalExpr} se define como \texttt{yFix evalMaker}
+
+\begin{equation*}
+\texttt{evalExpr} = \texttt{yFix evalMaker}
+\end{equation*}
+
+\textbf{Paso 2:} Por la definición de \texttt{yFix}, esto se expande a:
+
+\begin{equation*}
+\texttt{yFix f} = \texttt{f (yFix f)}
+\end{equation*}
+
+Por lo tanto:
+\begin{equation*}
+\texttt{yFix evalMaker} = \texttt{evalMaker (yFix evalMaker)} = \texttt{evalMaker evalExpr}
+\end{equation*}
+
+\textbf{Paso 3:} Cuando \texttt{evalMaker} procesa \texttt{(+ 2 3)}, usa su parámetro \texttt{evalRec} (que es \texttt{evalExpr}) para evaluar las subexpresiones:
+
+\begin{align*}
+\texttt{evalMaker evalRec (+ 2 3)} &= \texttt{evalRec 2 + evalRec 3} \\
+&= \texttt{evalExpr 2 + evalExpr 3} \\
+&= 2 + 3 \\
+&= 5
+\end{align*}
+
+\begin{quote}
+\textbf{Presentador:} ``Lo crucial aquí es que \texttt{evalMaker} \textbf{nunca se llama a sí misma}. Usa el parámetro \texttt{evalRec} que el combinador Y le proporciona.''
+\end{quote}
+
+\newpage
+\subsection*{Ejemplo Anidado}
+
+\begin{verbatim}
+TEST 2: Expresion anidada
+==========================
+Expresion: (* (+ 3 4) (- 10 2))
+Resultado: 56
+\end{verbatim}
+
+\begin{quote}
+\textbf{Presentador:} ``Con expresiones anidadas, la recursión se hace más evidente...''
+\end{quote}
+
+\begin{verbatim}
+Expansion paso a paso:
+  evalExpr (* (+ 3 4) (- 10 2))
+  = (evalMaker evalExpr) (* (+ 3 4) (- 10 2))
+  = evalExpr (+ 3 4) * evalExpr (- 10 2)
+  = ((evalMaker evalExpr) (+ 3 4)) * ((evalMaker evalExpr) (- 10 2))
+  = (evalExpr 3 + evalExpr 4) * (evalExpr 10 - evalExpr 2)
+  = (3 + 4) * (10 - 2)
+  = 7 * 8
+  = 56
+\end{verbatim}
+
+\begin{quote}
+\textbf{Presentador:} ``Cada llamada recursiva sigue el mismo patrón:''
+\end{quote}
+
+\begin{enumerate}
+\item \texttt{evalExpr} expande a \texttt{evalMaker evalExpr}
+\item \texttt{evalMaker} usa \texttt{evalExpr} (vía parámetro) para subexpresiones
+\item El ciclo se repite hasta llegar a números (casos base)
+\end{enumerate}
+
+\subsection*{Observaciones Finales}
+
+\begin{verbatim}
+==========================================
+OBSERVACIONES CLAVE:
+==========================================
+1. evalMaker NUNCA se llama a si misma por nombre
+2. La recursion viene del combinador Y via yFix
+3. Propiedad de punto fijo: evalExpr = evalMaker evalExpr
+4. En cada paso recursivo, evalMaker usa 'evalRec'
+5. 'evalRec' es en realidad 'evalExpr' (inyectado por Y)
+==========================================
+\end{verbatim}
+
+\begin{quote}
+\textbf{Presentador:} ``Esto demuestra que la recursión no necesita ser una primitiva del lenguaje. Puede implementarse usando solo funciones de orden superior.''
+\end{quote}
+
+\newpage
+\section{Demostración 2: Autointerpretación}
+
+\subsection*{Introducción}
+
+\begin{quote}
+\textbf{Presentador:} ``Ahora vamos a ver algo más profundo: la \textbf{autointerpretación}. Un intérprete que se usa a sí mismo para interpretar subexpresiones.''
+
+\textbf{Presentador:} ``La diferencia con la demostración anterior es conceptual: ahora enfatizamos que el intérprete \textit{se pasa a sí mismo como argumento}.''
+\end{quote}
+
+\subsection*{Ejecución del Programa}
+
+\begin{verbatim}
+$ ./autointerprete
+=== AUTOINTERPRETE CON COMBINADOR Y ===
+
+Expresion 1: (+ 2 3)
+Resultado: 5
+
+Expresion 2: (* (+ 3 4) (- 10 2))
+Resultado: 56
+
+Expresion 3: (/ 20 (+ 2 3))
+Resultado: 4
+\end{verbatim}
+
+\subsection*{¿Por Qué Esto Es Autointerpretación?}
+
+\begin{quote}
+\textbf{Presentador:} ``La clave está en esta propiedad:''
+\end{quote}
+
+\begin{equation*}
+\texttt{interprete} = \texttt{interpreteMaker interprete}
+\end{equation*}
+
+\begin{quote}
+\textbf{Presentador:} ``Esto significa que \texttt{interpreteMaker} recibe \texttt{interprete} (es decir, \textit{a sí mismo}) como argumento.''
+\end{quote}
+
+\textbf{Análisis del código:}
+
+\begin{lstlisting}[language=Haskell, caption=Autointérprete]
+interpreteMaker :: (ASAValues -> Int) -> (ASAValues -> Int)
+interpreteMaker self expr = case expr of
+    NumV n -> n
+    AddV e1 e2 -> self e1 + self e2
+    --            ^^^^ Aqui 'self' es en realidad 'interprete'
+
+interprete :: ASAValues -> Int
+interprete = yFix interpreteMaker
+-- interprete = interpreteMaker interprete
+\end{lstlisting}
+
+\begin{quote}
+\textbf{Presentador:} ``Cuando evaluamos \texttt{(+ 2 3)}:''
+\end{quote}
+
+\begin{align*}
+&\texttt{interprete (+ 2 3)} \\
+&= \texttt{(interpreteMaker interprete) (+ 2 3)} \\
+&= \texttt{interprete 2 + interprete 3} \quad \text{[interprete usa interprete]} \\
+&= 2 + 3 = 5
+\end{align*}
+
+\begin{quote}
+\textbf{Presentador:} ``El intérprete literalmente se usa a sí mismo. Esta es la definición de autointerpretación.''
+\end{quote}
+
+\subsection*{Diferencia con Recursión Tradicional}
+
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Recursión Tradicional} & \textbf{Autointerpretación con Y} \\
+\hline
+\texttt{f x = ... f ...} & \texttt{fMaker self x = ... self ...} \\
+Auto-referencia por nombre & Recibe referencia como parámetro \\
+Ciclo implícito en el lenguaje & Ciclo explícito vía punto fijo \\
+\texttt{f} está predefinida & \texttt{f = yFix fMaker} \\
+\hline
+\end{tabular}
+\end{center}
+
+\begin{quote}
+\textbf{Presentador:} ``Sin el combinador Y, la autointerpretación sería imposible en cálculo lambda puro, porque no habría forma de que una función se reciba a sí misma como argumento.''
+\end{quote}
+
+\subsection*{Mensaje Final}
+
+\begin{verbatim}
+Propiedad de autointerpretacion:
+  interprete = interpreteMaker interprete
+  El interprete se pasa a si mismo como argumento
+  Esto es AUTOINTERPRETACION gracias al combinador Y
+\end{verbatim}
+
+\newpage
+\subsection*{Tests Formales de Autointerpretación}
+
+\begin{quote}
+\textbf{Presentador:} ``Para verificar que nuestra autointerpretación funciona correctamente, ejecutemos los tests formales...''
+\end{quote}
+
+\begin{verbatim}
+$ ./test_autointerprete
+==========================================
+TESTS FORMALES: AUTOINTERPRETACION
+==========================================
+
+Test 1 - Numeros simples: Pass
+Test 2 - Suma simple: Pass
+Test 3 - Resta: Pass
+Test 4 - Multiplicacion: Pass
+Test 5 - Division: Pass
+Test 6 - Expresion anidada: Pass
+Test 7 - Expresion compleja: Pass
+Test 8 - Division anidada: Pass
+Test 9 - Punto fijo (interprete = interpreteMaker interprete): Pass
+Test 10 - Expresion muy anidada: Pass
+
+==========================================
+RESULTADO: 10/10 tests pasados
+EXITO: Todos los tests de autointerpretacion pasaron!
+\end{verbatim}
+
+\begin{quote}
+\textbf{Presentador:} ``El Test 9 es particularmente importante. Veamos por qué...''
+\end{quote}
+
+\textbf{Test 9: Verificación de la Propiedad de Punto Fijo}
+
+\begin{lstlisting}[language=Haskell]
+-- Test 9: Verificar autointerpretacion
+let expr9 = AddV (NumV 10) (NumV 20)
+let result9a = interprete expr9
+let result9b = interpreteMaker interprete expr9
+let test9 = runTest "Test 9: Propiedad de punto fijo"
+                    (result9a == result9b)
+\end{lstlisting}
+
+\begin{quote}
+\textbf{Presentador:} ``¿Por qué este test verifica autointerpretación?''
+\end{quote}
+
+\textbf{Explicación:}
+
+\begin{enumerate}
+\item \textbf{Calculamos de dos formas}:
+\begin{itemize}
+\item \texttt{result9a = interprete expr9} (usando directamente el intérprete)
+\item \texttt{result9b = interpreteMaker interprete expr9} (aplicando interpreteMaker a interprete)
+\end{itemize}
+
+\item \textbf{Si son iguales}, entonces se cumple: $\texttt{interprete} = \texttt{interpreteMaker interprete}$
+
+\item \textbf{Esto prueba que} \texttt{interpreteMaker} recibe \texttt{interprete} (a sí mismo) como argumento
+
+\item \textbf{Por lo tanto}, el intérprete se está usando a sí mismo para evaluar subexpresiones = \textbf{AUTOINTERPRETACIÓN}
+\end{enumerate}
+
+\begin{quote}
+\textbf{Presentador:} ``Sin el combinador Y, esta propiedad sería imposible de lograr en cálculo lambda puro, porque no habría forma de crear esta auto-referencia sin nombrar la función recursivamente.''
+\end{quote}
+
+\newpage
+\section{Demostración 3: Metaprogramación}
+
+\subsection*{Introducción}
+
+\begin{quote}
+\textbf{Presentador:} ``Finalmente, veamos cómo la autointerpretación habilita la \textbf{metaprogramación}: la capacidad del código para manipularse a sí mismo.''
+
+\textbf{Presentador:} ``Demostraremos dos tipos de metaprogramación:''
+\end{quote}
+
+\begin{enumerate}
+\item Inspección de código - El programa examina su estructura
+\item Optimización de código - El programa se transforma a sí mismo
+\end{enumerate}
+
+\subsection*{Ejecución del Programa}
+
+\begin{verbatim}
+$ ./metaprogramacion
+==========================================
+METAPROGRAMACION CON COMBINADOR Y
+==========================================
+\end{verbatim}
+
+\subsection*{Parte 1: Inspección de Código}
+
+\begin{quote}
+\textbf{Presentador:} ``Primero, el código puede \textit{inspeccionarse} a sí mismo para detectar características peligrosas...''
+\end{quote}
+
+\begin{verbatim}
+1. INSPECCION DE CODIGO
+====================
+Expresion: (+ 5 3)
+Contiene division? False
+Evaluacion segura: 8
+
+Expresion: (/ 10 2)
+Contiene division? True
+ADVERTENCIA: Contiene division
+\end{verbatim}
+
+\textbf{Explicación:}
+
+\begin{lstlisting}[language=Haskell, caption=Inspección de código]
+contieneDivision :: ASAValues -> Bool
+contieneDivision expr = case expr of
+    NumV _ -> False
+    DivV _ _ -> True  -- Encontro una division!
+    AddV e1 e2 -> contieneDivision e1 || contieneDivision e2
+    SubV e1 e2 -> contieneDivision e1 || contieneDivision e2
+    MultV e1 e2 -> contieneDivision e1 || contieneDivision e2
+\end{lstlisting}
+
+\begin{quote}
+\textbf{Presentador:} ``Esta función \textit{analiza} el código antes de ejecutarlo. El programa examina su propia estructura.''
+
+\textbf{Presentador:} ``¿Por qué esto es metaprogramación? Porque el código (tipo \texttt{ASAValues}) se trata como \textit{datos} que podemos inspeccionar.''
+\end{quote}
+
+\newpage
+\subsection*{Parte 2: Optimización de Código}
+
+\begin{quote}
+\textbf{Presentador:} ``Ahora veamos cómo el código puede \textit{transformarse} a sí mismo...''
+\end{quote}
+
+\begin{verbatim}
+2. OPTIMIZACION DE CODIGO
+======================
+Expresion original: (+ (* 0 999) 5)
+Expresion optimizada: (+ 0 5)
+Resultado sin optimizar: 5
+Resultado optimizado: 5
+\end{verbatim}
+
+\textbf{Explicación del proceso:}
+
+\begin{enumerate}
+\item \textbf{Expresión original:} \texttt{(+ (* 0 999) 5)}
+\item \textbf{Optimización detecta:} Multiplicación por 0
+\item \textbf{Regla aplicada:} \texttt{(* 0 x) $\rightarrow$ 0}
+\item \textbf{Resultado:} \texttt{(+ 0 5)}
+\item \textbf{Segunda optimización:} Suma con 0
+\item \textbf{Regla aplicada:} \texttt{(+ 0 x) $\rightarrow$ x}
+\item \textbf{Resultado final:} \texttt{5}
+\end{enumerate}
+
+\begin{quote}
+\textbf{Presentador:} ``El programa se reescribe a sí mismo antes de ejecutarse, eliminando cálculos innecesarios.''
+\end{quote}
+
+\textbf{Más ejemplos:}
+
+\begin{verbatim}
+Expresion original: (* (+ 0 7) (+ 3 0))
+Expresion optimizada: (* 7 3)
+Resultado sin optimizar: 21
+Resultado optimizado: 21
+
+Expresion original: (+ (* 1 10) (* 0 100))
+Expresion optimizada: (+ 10 0)
+Resultado sin optimizar: 10
+Resultado optimizado: 10
+\end{verbatim}
+
+\begin{quote}
+\textbf{Presentador:} ``Observen cómo se simplifican las expresiones:''
+\end{quote}
+
+\begin{itemize}
+\item \texttt{(+ 0 x)} se simplifica a \texttt{x}
+\item \texttt{(* 1 x)} se simplifica a \texttt{x}
+\item \texttt{(* 0 x)} se simplifica a \texttt{0}
+\end{itemize}
+
+\subsection*{Código de Optimización}
+
+\begin{lstlisting}[language=Haskell, caption=Transformación de código]
+optimizar :: ASAValues -> ASAValues
+optimizar expr = case expr of
+    -- Eliminar sumas con cero
+    AddV (NumV 0) e -> optimizar e
+    AddV e (NumV 0) -> optimizar e
+
+    -- Eliminar multiplicaciones por 1
+    MultV (NumV 1) e -> optimizar e
+    MultV e (NumV 1) -> optimizar e
+
+    -- Multiplicacion por 0 = 0
+    MultV (NumV 0) _ -> NumV 0
+    MultV _ (NumV 0) -> NumV 0
+
+    -- Recursivamente optimizar subexpresiones
+    AddV e1 e2 -> AddV (optimizar e1) (optimizar e2)
+    ...
+\end{lstlisting}
+
+\begin{quote}
+\textbf{Presentador:} ``Esta función \textit{transforma} el código. Toma código como entrada y produce código como salida.''
+\end{quote}
+
+\subsection*{¿Por Qué el Combinador Y Es Esencial?}
+
+\begin{quote}
+\textbf{Presentador:} ``Estas capacidades de metaprogramación son posibles porque:''
+\end{quote}
+
+\begin{enumerate}
+\item \textbf{Autointerpretación:} El combinador Y permite que el lenguaje se interprete a sí mismo
+\item \textbf{Código = Datos:} Las expresiones son valores de tipo \texttt{ASAValues}
+\item \textbf{Recursión ilimitada:} El combinador Y permite procesar estructuras arbitrariamente anidadas
+\item \textbf{Sin primitivas:} Todo funciona en cálculo lambda puro
+\end{enumerate}
+
+\newpage
+\subsection*{Tests Formales de Metaprogramación}
+
+\begin{quote}
+\textbf{Presentador:} ``Ahora verifiquemos formalmente que nuestras capacidades de metaprogramación funcionan correctamente...''
+\end{quote}
+
+\begin{verbatim}
+$ ./test_metaprogramacion
+==========================================
+TESTS FORMALES: METAPROGRAMACION
+==========================================
+
+PARTE 1: TESTS DE INSPECCION DE CODIGO
+========================================
+Test 1 - Detectar division presente: Pass
+Test 2 - Detectar ausencia de division: Pass
+Test 3 - Detectar division anidada: Pass
+Test 4 - Evaluacion segura sin division: Pass
+Test 5 - Advertencia con division: Pass
+
+PARTE 2: TESTS DE OPTIMIZACION DE CODIGO
+==========================================
+Test 6 - Optimizar suma con cero: Pass
+Test 7 - Optimizar multiplicacion por 1: Pass
+Test 8 - Optimizar multiplicacion por 0: Pass
+Test 9 - Optimizacion anidada: Pass
+Test 10 - Resultado preservado tras optimizacion: Pass
+Test 11 - Optimizacion compleja: Pass
+Test 12 - Preservacion resultado complejo: Pass
+
+==========================================
+RESULTADO: 12/12 tests pasados
+EXITO: Todos los tests de metaprogramacion pasaron!
+\end{verbatim}
+
+\begin{quote}
+\textbf{Presentador:} ``Estos tests demuestran dos cosas fundamentales...''
+\end{quote}
+
+\textbf{1. ¿Por qué la inspección de código es metaprogramación?}
+
+\begin{lstlisting}[language=Haskell]
+-- Test: Detectar division presente
+let test1 = runTest "Test 1: Detectar division en (/ 10 2)"
+                    (contieneDivision (DivV (NumV 10) (NumV 2)) == True)
+\end{lstlisting}
+
+\textbf{Explicación:}
+\begin{enumerate}
+\item La función \texttt{contieneDivision} recibe \textbf{código} (expresión ASA) como entrada
+\item \textbf{Analiza} la estructura del código sin ejecutarlo
+\item Retorna información \textbf{sobre el código} (si contiene división)
+\item El código está \textbf{inspeccionando código} = \textbf{METAPROGRAMACIÓN}
+\end{enumerate}
+
+\begin{quote}
+\textbf{Presentador:} ``Esto es posible porque el combinador Y nos permitió construir un intérprete que puede razonar sobre su propio código.''
+\end{quote}
+
+\textbf{2. ¿Por qué la optimización es metaprogramación?}
+
+\begin{lstlisting}[language=Haskell]
+-- Test: Optimizacion anidada
+let expr9 = AddV (MultV (NumV 0) (NumV 999)) (NumV 5)
+let test9 = runTest "Test 9: Optimizar (+ (* 0 999) 5)"
+                    (optimizar expr9 == NumV 5)
+\end{lstlisting}
+
+\textbf{Explicación paso a paso:}
+\begin{enumerate}
+\item \textbf{Entrada}: Código \texttt{(+ (* 0 999) 5)}
+\item \textbf{Función optimizar}:
+\begin{itemize}
+\item Inspecciona: detecta \texttt{(* 0 999)}
+\item Aplica regla: \texttt{(* 0 x) $\rightarrow$ 0}
+\item Genera nuevo código: \texttt{(+ 0 5)}
+\item Inspecciona: detecta \texttt{(+ 0 5)}
+\item Aplica regla: \texttt{(+ 0 x) $\rightarrow$ x}
+\item Genera código final: \texttt{5}
+\end{itemize}
+\item \textbf{Salida}: Código transformado \texttt{5}
+\item El código está \textbf{transformando código} = \textbf{METAPROGRAMACIÓN}
+\end{enumerate}
+
+\textbf{3. Verificación de Preservación de Resultados}
+
+\begin{lstlisting}[language=Haskell]
+-- Test: Verificar que optimizacion preserva resultado
+let expr10 = MultV (AddV (NumV 0) (NumV 7)) (AddV (NumV 3) (NumV 0))
+let test10 = runTest "Test 10: Resultado preservado"
+                     (interprete expr10 == evalOptimizado expr10)
+\end{lstlisting}
+
+\begin{quote}
+\textbf{Presentador:} ``Este test es crucial: verifica que las transformaciones de código \textit{preservan el significado}. El código optimizado debe dar el mismo resultado que el original.''
+\end{quote}
+
+\textbf{¿Cómo funciona la preservación?}
+\begin{enumerate}
+\item \texttt{interprete expr10} evalúa el código original $\rightarrow$ resultado 21
+\item \texttt{evalOptimizado expr10 = interprete (optimizar expr10)}
+\begin{itemize}
+\item Primero optimiza: \texttt{(* (+ 0 7) (+ 3 0)) $\rightarrow$ (* 7 3)}
+\item Luego evalúa: \texttt{(* 7 3) $\rightarrow$ 21}
+\end{itemize}
+\item Si ambos dan 21, la transformación es \textbf{correcta}
+\item Todos los tests verifican esta propiedad $\rightarrow$ \textbf{12/12 tests pasados}
+\end{enumerate}
+
+\subsection*{Conclusiones}
+
+\begin{verbatim}
+==========================================
+CONCLUSIONES:
+- El codigo puede INSPECCIONARSE a si mismo
+- El codigo puede TRANSFORMARSE a si mismo
+- Esto es METAPROGRAMACION habilitada por el combinador Y
+==========================================
+\end{verbatim}
+
+\begin{quote}
+\textbf{Presentador:} ``La metaprogramación que acabamos de ver es la base de:''
+\end{quote}
+
+\begin{itemize}
+\item Compiladores optimizadores
+\item Sistemas de macros (como en Lisp/Scheme)
+\item Compilación JIT (Just-In-Time)
+\item Evaluación parcial
+\item Análisis estático de código
+\item Reflection en lenguajes modernos
+\end{itemize}
+
+\begin{quote}
+\textbf{Presentador:} ``Todo esto es posible gracias al simple pero poderoso combinador Y, que permite que un lenguaje se interprete y se transforme a sí mismo.''
+\end{quote}
+
+\newpage
+\section{Resumen: Cadena de Implicaciones}
+
+\begin{quote}
+\textbf{Presentador:} ``Para finalizar, veamos cómo todo se conecta:''
+\end{quote}
+
+\begin{align*}
+\text{Combinador Y} &\Rightarrow \text{Recursión sin auto-referencia} \\
+&\Rightarrow \text{Autointerpretación posible} \\
+&\Rightarrow \text{Código como datos manipulables} \\
+&\Rightarrow \text{Metaprogramación}
+\end{align*}
+
+\subsection*{Tabla Comparativa Final}
+
+\begin{center}
+\begin{tabular}{|l|p{8cm}|}
+\hline
+\textbf{Concepto} & \textbf{Qué Demuestra} \\
+\hline
+\textbf{Recursión} & \texttt{evalMaker} nunca se llama a sí misma. La recursión viene del combinador Y. \\
+\hline
+\textbf{Autointerpretación} & El intérprete se pasa a sí mismo como argumento: \texttt{interprete = interpreteMaker interprete} \\
+\hline
+\textbf{Metaprogramación} & El código se inspecciona y transforma a sí mismo antes de ejecutarse. \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection*{Mensaje Final}
+
+\begin{quote}
+\textbf{Presentador:} ``Hemos demostrado que:''
+\end{quote}
+
+\begin{enumerate}
+\item La recursión no requiere auto-referencia explícita
+\item Un lenguaje puede interpretarse a sí mismo gracias al combinador Y
+\item La autointerpretación habilita metaprogramación
+\item Estas capacidades funcionan en cálculo lambda puro
+\end{enumerate}
+
+\begin{quote}
+\textbf{Presentador:} ``El combinador Y no es solo una curiosidad teórica. Es el fundamento de características avanzadas en lenguajes modernos: optimización de compiladores, reflexión, macros, y metaprogramación.''
+
+\textbf{Presentador:} ``Todo esto emerge de una simple ecuación de punto fijo: \texttt{f = yFix fMaker}.''
+\end{quote}
+
+\end{document}
